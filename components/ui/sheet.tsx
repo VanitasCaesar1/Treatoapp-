@@ -1,140 +1,197 @@
-"use client"
+'use client';
 
-import * as React from "react"
-import * as SheetPrimitive from "@radix-ui/react-dialog"
-import { cva, type VariantProps } from "class-variance-authority"
-import { X } from "lucide-react"
+import { useEffect, useRef, useState } from 'react';
+import { X } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-import { cn } from "@/lib/utils"
+interface SheetProps {
+  isOpen: boolean;
+  onClose: () => void;
+  children: React.ReactNode;
+  title?: string;
+  description?: string;
+  snapPoints?: number[];
+  initialSnap?: number;
+}
 
-const Sheet = SheetPrimitive.Root
+export function Sheet({
+  isOpen,
+  onClose,
+  children,
+  title,
+  description,
+  snapPoints = [0.9, 0.5],
+  initialSnap = 1,
+}: SheetProps) {
+  const [isDragging, setIsDragging] = useState(false);
+  const [translateY, setTranslateY] = useState(0);
+  const [currentSnap, setCurrentSnap] = useState(initialSnap);
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const startY = useRef(0);
+  const currentY = useRef(0);
 
-const SheetTrigger = SheetPrimitive.Trigger
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+      setTranslateY(0);
+    } else {
+      document.body.style.overflow = '';
+    }
 
-const SheetClose = SheetPrimitive.Close
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
 
-const SheetPortal = SheetPrimitive.Portal
+  const handleDragStart = (clientY: number) => {
+    setIsDragging(true);
+    startY.current = clientY;
+    currentY.current = translateY;
+  };
 
-const SheetOverlay = React.forwardRef<
-  React.ElementRef<typeof SheetPrimitive.Overlay>,
-  React.ComponentPropsWithoutRef<typeof SheetPrimitive.Overlay>
->(({ className, ...props }, ref) => (
-  <SheetPrimitive.Overlay
-    className={cn(
-      "fixed inset-0 z-50 bg-black/80  data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-      className
-    )}
-    {...props}
-    ref={ref}
-  />
-))
-SheetOverlay.displayName = SheetPrimitive.Overlay.displayName
+  const handleDragMove = (clientY: number) => {
+    if (!isDragging) return;
 
-const sheetVariants = cva(
-  "fixed z-50 gap-4 bg-background p-6 shadow-lg transition ease-in-out data-[state=closed]:duration-300 data-[state=open]:duration-500 data-[state=open]:animate-in data-[state=closed]:animate-out",
-  {
-    variants: {
-      side: {
-        top: "inset-x-0 top-0 border-b data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top",
-        bottom:
-          "inset-x-0 bottom-0 border-t data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
-        left: "inset-y-0 left-0 h-full w-3/4 border-r data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left sm:max-w-sm",
-        right:
-          "inset-y-0 right-0 h-full w-3/4 border-l data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right sm:max-w-sm",
-      },
-    },
-    defaultVariants: {
-      side: "right",
-    },
-  }
-)
+    const deltaY = clientY - startY.current;
+    const newTranslateY = Math.max(0, currentY.current + deltaY);
+    setTranslateY(newTranslateY);
+  };
 
-interface SheetContentProps
-  extends React.ComponentPropsWithoutRef<typeof SheetPrimitive.Content>,
-    VariantProps<typeof sheetVariants> {}
+  const handleDragEnd = () => {
+    if (!isDragging) return;
+    setIsDragging(false);
 
-const SheetContent = React.forwardRef<
-  React.ElementRef<typeof SheetPrimitive.Content>,
-  SheetContentProps
->(({ side = "right", className, children, ...props }, ref) => (
-  <SheetPortal>
-    <SheetOverlay />
-    <SheetPrimitive.Content
-      ref={ref}
-      className={cn(sheetVariants({ side }), className)}
-      {...props}
-    >
-      <SheetPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary">
-        <X className="h-4 w-4" />
-        <span className="sr-only">Close</span>
-      </SheetPrimitive.Close>
-      {children}
-    </SheetPrimitive.Content>
-  </SheetPortal>
-))
-SheetContent.displayName = SheetPrimitive.Content.displayName
+    const threshold = window.innerHeight * 0.2;
 
-const SheetHeader = ({
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLDivElement>) => (
-  <div
-    className={cn(
-      "flex flex-col space-y-2 text-center sm:text-left",
-      className
-    )}
-    {...props}
-  />
-)
-SheetHeader.displayName = "SheetHeader"
+    if (translateY > threshold) {
+      onClose();
+    } else {
+      setTranslateY(0);
+    }
+  };
 
-const SheetFooter = ({
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLDivElement>) => (
-  <div
-    className={cn(
-      "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2",
-      className
-    )}
-    {...props}
-  />
-)
-SheetFooter.displayName = "SheetFooter"
+  const handleMouseDown = (e: React.MouseEvent) => {
+    handleDragStart(e.clientY);
+  };
 
-const SheetTitle = React.forwardRef<
-  React.ElementRef<typeof SheetPrimitive.Title>,
-  React.ComponentPropsWithoutRef<typeof SheetPrimitive.Title>
->(({ className, ...props }, ref) => (
-  <SheetPrimitive.Title
-    ref={ref}
-    className={cn("text-lg font-semibold text-foreground", className)}
-    {...props}
-  />
-))
-SheetTitle.displayName = SheetPrimitive.Title.displayName
+  const handleMouseMove = (e: MouseEvent) => {
+    handleDragMove(e.clientY);
+  };
 
-const SheetDescription = React.forwardRef<
-  React.ElementRef<typeof SheetPrimitive.Description>,
-  React.ComponentPropsWithoutRef<typeof SheetPrimitive.Description>
->(({ className, ...props }, ref) => (
-  <SheetPrimitive.Description
-    ref={ref}
-    className={cn("text-sm text-muted-foreground", className)}
-    {...props}
-  />
-))
-SheetDescription.displayName = SheetPrimitive.Description.displayName
+  const handleMouseUp = () => {
+    handleDragEnd();
+  };
 
-export {
-  Sheet,
-  SheetPortal,
-  SheetOverlay,
-  SheetTrigger,
-  SheetClose,
-  SheetContent,
-  SheetHeader,
-  SheetFooter,
-  SheetTitle,
-  SheetDescription,
+  const handleTouchStart = (e: React.TouchEvent) => {
+    handleDragStart(e.touches[0].clientY);
+  };
+
+  const handleTouchMove = (e: TouchEvent) => {
+    handleDragMove(e.touches[0].clientY);
+  };
+
+  const handleTouchEnd = () => {
+    handleDragEnd();
+  };
+
+  useEffect(() => {
+    if (isDragging) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+      window.addEventListener('touchmove', handleTouchMove);
+      window.addEventListener('touchend', handleTouchEnd);
+
+      return () => {
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+        window.removeEventListener('touchmove', handleTouchMove);
+        window.removeEventListener('touchend', handleTouchEnd);
+      };
+    }
+  }, [isDragging]);
+
+  if (!isOpen) return null;
+
+  const height = snapPoints[currentSnap] * 100;
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className={cn(
+          'fixed inset-0 z-50 bg-black/50',
+          'transition-opacity duration-300',
+          isOpen ? 'opacity-100' : 'opacity-0'
+        )}
+        onClick={onClose}
+        aria-hidden="true"
+      />
+
+      {/* Sheet */}
+      <div
+        ref={sheetRef}
+        className={cn(
+          'fixed bottom-0 left-0 right-0 z-50',
+          'bg-white rounded-t-3xl shadow-2xl',
+          'transition-transform duration-300 ease-out',
+          isDragging && 'transition-none'
+        )}
+        style={{
+          height: `${height}vh`,
+          transform: `translateY(${translateY}px)`,
+        }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={title ? 'sheet-title' : undefined}
+        aria-describedby={description ? 'sheet-description' : undefined}
+      >
+        {/* Drag Handle */}
+        <div
+          className="flex justify-center pt-3 pb-2 cursor-grab active:cursor-grabbing"
+          onMouseDown={handleMouseDown}
+          onTouchStart={handleTouchStart}
+        >
+          <div className="w-12 h-1.5 bg-gray-300 rounded-full" />
+        </div>
+
+        {/* Header */}
+        {(title || description) && (
+          <div className="px-6 py-4 border-b border-gray-200">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                {title && (
+                  <h2
+                    id="sheet-title"
+                    className="text-xl font-semibold text-gray-900"
+                  >
+                    {title}
+                  </h2>
+                )}
+                {description && (
+                  <p
+                    id="sheet-description"
+                    className="mt-1 text-sm text-gray-500"
+                  >
+                    {description}
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={onClose}
+                className="ml-4 p-2 hover:bg-gray-100 rounded-full transition-colors"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Content */}
+        <div className="overflow-y-auto px-6 py-4" style={{ maxHeight: `calc(${height}vh - 120px)` }}>
+          {children}
+        </div>
+      </div>
+    </>
+  );
 }

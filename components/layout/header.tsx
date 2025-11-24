@@ -1,105 +1,165 @@
 'use client';
 
-import { useState } from 'react';
-import { Bell, Menu } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Bell, Search, ArrowLeft, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { LogoutButton } from '@/components/auth/logout-button';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from '@/components/ui/sheet';
-import { Sidebar } from './sidebar';
+import { useState, useEffect } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import { useCapacitor } from '@/lib/capacitor';
+import { useUserSession } from '@/lib/contexts/user-session-context';
 
-interface HeaderProps {
-  user: {
-    firstName?: string | null;
-    lastName?: string | null;
-    email: string;
-    profilePictureUrl?: string | null;
+export function Header() {
+  const pathname = usePathname();
+  const router = useRouter();
+  const [notificationCount] = useState(3);
+  const [location, setLocation] = useState('Location');
+  const capacitor = useCapacitor();
+  const { user } = useUserSession();
+
+  // Hide header on pages with their own integrated headers
+  const hideHeaderPages = ['/search'];
+  if (hideHeaderPages.some(page => pathname?.includes(page))) {
+    return null;
+  }
+
+  useEffect(() => {
+    const getLocation = async () => {
+      const position = await capacitor.getCurrentPosition();
+      if (position) {
+        const name = await capacitor.getLocationName(position.latitude, position.longitude);
+        setLocation(name);
+      }
+    };
+    getLocation();
+  }, [capacitor]);
+
+  const handleBackClick = () => {
+    capacitor.lightHaptic();
+    router.back();
   };
-}
 
-export function Header({ user }: HeaderProps) {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  
-  const initials = user.firstName && user.lastName
-    ? `${user.firstName[0]}${user.lastName[0]}`
-    : user.email[0].toUpperCase();
+  const handleNotificationClick = () => {
+    capacitor.lightHaptic();
+    // TODO: Navigate to notifications
+  };
 
-  const displayName = user.firstName && user.lastName
-    ? `${user.firstName} ${user.lastName}`
-    : user.email;
+  const handleLocationClick = () => {
+    capacitor.lightHaptic();
+    // TODO: Open location picker
+  };
+
+  const getPageTitle = () => {
+    if (pathname?.includes('/search/') && pathname?.split('/').length > 3) return 'Doctor Profile';
+    if (pathname?.includes('/search')) return 'Search';
+    if (pathname?.includes('/appointments/book')) return 'Book Appointment';
+    if (pathname?.includes('/appointments/') && pathname?.split('/').length > 3) return 'Appointment Details';
+    if (pathname?.includes('/appointments')) return 'Appointments';
+    if (pathname?.includes('/medical-records/') && pathname?.split('/').length > 3) return 'Record Details';
+    if (pathname?.includes('/medical-records')) return 'Medical Records';
+    if (pathname?.includes('/profile')) return 'Profile';
+    if (pathname?.includes('/video')) return 'Video Call';
+    return 'Home';
+  };
+
+  const showBackButton = () => {
+    // Show back button on detail pages
+    return pathname?.includes('/doctors/') && pathname?.split('/').length > 3 ||
+      pathname?.includes('/appointments/') && pathname?.split('/').length > 3 ||
+      pathname?.includes('/medical-records/') && pathname?.split('/').length > 3 ||
+      pathname?.includes('/appointments/book');
+  };
+
+  const showSearch = () => {
+    // Show search on list pages
+    return pathname?.includes('/search') ||
+      pathname?.includes('/appointments') ||
+      pathname?.includes('/medical-records');
+  };
+
+  const isSearchPage = pathname === '/search';
+  const isDashboard = pathname === '/dashboard';
 
   return (
-    <header className="sticky top-0 z-40 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60" role="banner">
-      <div className="flex items-center justify-between px-3 md:px-6 py-3 md:py-4">
-        {/* Mobile: Logo/Title - Desktop: Menu Button */}
-        <div className="flex items-center gap-2">
-          <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-            <SheetTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="lg:hidden h-9 w-9"
-                aria-label="Open navigation menu"
-              >
-                <Menu className="h-5 w-5" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="p-0 w-64">
-              <SheetHeader className="sr-only">
-                <SheetTitle>Navigation Menu</SheetTitle>
-              </SheetHeader>
-              <Sidebar onNavigate={() => setMobileMenuOpen(false)} />
-            </SheetContent>
-          </Sheet>
-
-          <h1 className="text-base md:text-xl font-semibold truncate">
-            <span className="lg:inline">Welcome back, {user.firstName || 'Patient'}</span>
-            <span className="lg:hidden">Patient Portal</span>
-          </h1>
-        </div>
-        
-        <div className="flex items-center gap-1 md:gap-3">
-          {/* Notifications */}
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="relative h-9 w-9"
-            aria-label="View notifications"
-          >
-            <Bell className="h-5 w-5" />
-            <span 
-              className="absolute top-1.5 right-1.5 h-2 w-2 bg-red-500 rounded-full" 
-              aria-label="You have unread notifications"
-            />
-          </Button>
-
-          {/* User Avatar - Mobile: Just avatar, Desktop: Avatar + Info */}
-          <Button
-            variant="ghost"
-            className="h-9 px-2 md:px-3 gap-2"
-            aria-label="User menu"
-          >
-            <Avatar className="h-7 w-7 md:h-8 md:w-8">
-              <AvatarImage src={user.profilePictureUrl || undefined} alt={`${displayName}'s profile picture`} />
-              <AvatarFallback className="text-xs">{initials}</AvatarFallback>
-            </Avatar>
-            <div className="hidden md:block text-left">
-              <p className="text-sm font-medium leading-none">{displayName}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">{user.email}</p>
+    <header
+      className="sticky top-0 z-40 bg-white/95 backdrop-blur-safe border-b border-gray-200 transition-all duration-200 tap-highlight-none shadow-sm"
+      role="banner"
+    >
+      <div className="pt-safe"></div>
+      <div className="px-4 py-3">
+        {isSearchPage ? (
+          // Search page - Airbnb-style search bar
+          <div className="flex items-center gap-3">
+            <div className="flex-1 relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search doctors, hospitals..."
+                className="w-full h-12 pl-12 pr-4 bg-gray-50 rounded-full text-sm placeholder:text-gray-500 focus:outline-none focus:bg-white focus:ring-2 focus:ring-medical-blue/20 focus:border-medical-blue transition-all border border-gray-200"
+              />
             </div>
-          </Button>
-
-          {/* Logout - Desktop only */}
-          <div className="hidden lg:block">
-            <LogoutButton />
+            <button
+              onClick={handleNotificationClick}
+              className="touch-target rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 active:scale-95 transition-all relative flex-shrink-0"
+              aria-label="Notifications"
+            >
+              <Bell className="h-5 w-5 text-gray-700" />
+              {notificationCount > 0 && (
+                <span className="absolute top-0 right-0 h-2.5 w-2.5 bg-airbnb-red rounded-full ring-2 ring-white" />
+              )}
+            </button>
           </div>
-        </div>
+        ) : isDashboard ? (
+          // Dashboard - App name, location, notification
+          <div className="flex items-center justify-between relative">
+            <h1 className="text-xl font-bold bg-gradient-to-r from-medical-blue to-medical-blue-light bg-clip-text text-transparent tracking-tight">
+              Treato
+            </h1>
+
+            <button
+              onClick={handleLocationClick}
+              className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-gray-50/80 backdrop-blur-sm px-3 py-1.5 rounded-full border border-gray-100 hover:bg-gray-100 active:scale-95 transition-all cursor-pointer select-none-touch"
+              aria-label="Change location"
+            >
+              <MapPin className="h-3.5 w-3.5 text-medical-blue" />
+              <span className="text-xs font-semibold text-gray-700">{location}</span>
+            </button>
+
+            <button
+              onClick={handleNotificationClick}
+              className="touch-target rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 active:scale-95 transition-all relative"
+              aria-label="Notifications"
+            >
+              <Bell className="h-5 w-5 text-gray-700" />
+              {notificationCount > 0 && (
+                <span className="absolute top-2 right-2.5 h-2 w-2 bg-airbnb-red rounded-full" />
+              )}
+            </button>
+          </div>
+        ) : (
+          // Other pages - Simple header with back button
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {showBackButton() && (
+                <button
+                  onClick={handleBackClick}
+                  className="touch-target rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 active:scale-95 transition-all"
+                  aria-label="Go back"
+                >
+                  <ArrowLeft className="h-4 w-4 text-gray-700" />
+                </button>
+              )}
+              <h1 className="text-lg font-semibold text-gray-900 tracking-tight">
+                {getPageTitle()}
+              </h1>
+            </div>
+
+            <button className="h-10 w-10 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 active:scale-95 transition-all relative">
+              <Bell className="h-5 w-5 text-gray-700" />
+              {notificationCount > 0 && (
+                <span className="absolute top-2 right-2.5 h-2 w-2 bg-airbnb-red rounded-full" />
+              )}
+            </button>
+          </div>
+        )}
       </div>
     </header>
   );

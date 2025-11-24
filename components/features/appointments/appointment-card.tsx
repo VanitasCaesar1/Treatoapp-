@@ -41,7 +41,6 @@ export function AppointmentCard({ appointment }: AppointmentCardProps) {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
-    year: 'numeric',
   });
   const formattedTime = appointmentDateTime.toLocaleTimeString('en-US', {
     hour: 'numeric',
@@ -50,89 +49,96 @@ export function AppointmentCard({ appointment }: AppointmentCardProps) {
   });
 
   const isUpcoming = appointmentDateTime > new Date() && appointment.status !== 'cancelled';
+  const isVideo = appointment.consultationType === 'video';
 
   return (
-    <Card 
+    <div
       className={cn(
-        'hover:shadow-md transition-shadow',
-        !isUpcoming && 'opacity-75'
+        "group relative bg-white rounded-airbnb-lg border border-gray-100 shadow-airbnb-card hover:shadow-airbnb-hover transition-all duration-200 overflow-hidden",
+        !isUpcoming && "opacity-80 grayscale-[0.3] hover:grayscale-0 hover:opacity-100"
       )}
-      role="article"
-      aria-label={`Appointment with ${doctorName} on ${formattedDate} at ${formattedTime}`}
     >
-      <CardContent className="p-6">
+      {/* Status Strip */}
+      <div className={cn(
+        "absolute left-0 top-0 bottom-0 w-1.5",
+        appointment.status === 'confirmed' ? "bg-green-500" :
+          appointment.status === 'scheduled' ? "bg-medical-blue" :
+            appointment.status === 'cancelled' ? "bg-red-400" :
+              "bg-gray-300"
+      )} />
+
+      <div className="p-5 pl-6">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-4 flex-1">
-            <Avatar className="h-12 w-12">
-              <AvatarImage
-                src={appointment.doctor?.profileImage}
-                alt={`${doctorName}'s profile picture`}
-              />
-              <AvatarFallback>
-                {appointment.doctor?.firstName?.[0]}
-                {appointment.doctor?.lastName?.[0]}
-              </AvatarFallback>
-            </Avatar>
+            <div className="relative">
+              <Avatar className="h-14 w-14 border-2 border-white shadow-sm">
+                <AvatarImage
+                  src={appointment.doctor?.profileImage}
+                  alt={`${doctorName}'s profile picture`}
+                />
+                <AvatarFallback className="bg-medical-blue-50 text-medical-blue font-bold">
+                  {appointment.doctor?.firstName?.[0]}
+                  {appointment.doctor?.lastName?.[0]}
+                </AvatarFallback>
+              </Avatar>
+              {isVideo && (
+                <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-1 shadow-sm border border-gray-100">
+                  <div className="bg-green-500 rounded-full p-1">
+                    <Video className="h-2.5 w-2.5 text-white" />
+                  </div>
+                </div>
+              )}
+            </div>
 
-            <div className="flex-1 space-y-2">
-              <div>
-                <h3 className="font-semibold text-lg">{doctorName}</h3>
-                {appointment.doctor?.specialty && (
-                  <p className="text-sm text-muted-foreground">
-                    {appointment.doctor.specialty}
-                  </p>
-                )}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between mb-1">
+                <h3 className="font-bold text-gray-900 truncate pr-2">{doctorName}</h3>
+                <Badge
+                  variant="secondary"
+                  className={cn(
+                    "rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider",
+                    statusColors[appointment.status]
+                  )}
+                >
+                  {appointment.status.replace('-', ' ')}
+                </Badge>
               </div>
 
-              <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                <div className="flex items-center gap-1.5">
-                  <Calendar className="h-4 w-4" aria-hidden="true" />
-                  <time dateTime={appointment.appointmentDate}>{formattedDate}</time>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Clock className="h-4 w-4" aria-hidden="true" />
-                  <time dateTime={appointment.appointmentTime}>{formattedTime}</time>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <ConsultationIcon className="h-4 w-4" aria-hidden="true" />
-                  <span className="capitalize">{appointment.consultationType.replace('-', ' ')}</span>
-                </div>
-              </div>
-
-              {appointment.reason && (
-                <p className="text-sm">
-                  <span className="font-medium">Reason:</span> {appointment.reason}
+              {appointment.doctor?.specialty && (
+                <p className="text-sm text-medical-blue font-medium mb-3">
+                  {appointment.doctor.specialty}
                 </p>
               )}
 
-              <div className="flex items-center gap-2">
-                <Badge
-                  variant="secondary"
-                  className={statusColors[appointment.status]}
-                  aria-label={`Status: ${appointment.status.replace('-', ' ')}`}
-                >
-                  <span className="capitalize">{appointment.status.replace('-', ' ')}</span>
-                </Badge>
-                {appointment.duration && (
-                  <Badge variant="outline" aria-label={`Duration: ${appointment.duration} minutes`}>
-                    {appointment.duration} min
-                  </Badge>
-                )}
+              <div className="flex flex-wrap items-center gap-y-2 gap-x-4 text-sm text-gray-600">
+                <div className="flex items-center gap-1.5 bg-gray-50 px-2 py-1 rounded-md">
+                  <Calendar className="h-3.5 w-3.5 text-gray-400" />
+                  <span className="font-medium">{formattedDate}</span>
+                </div>
+                <div className="flex items-center gap-1.5 bg-gray-50 px-2 py-1 rounded-md">
+                  <Clock className="h-3.5 w-3.5 text-gray-400" />
+                  <span className="font-medium">{formattedTime}</span>
+                </div>
               </div>
             </div>
           </div>
-
-          <Button variant="ghost" size="icon" asChild>
-            <Link 
-              href={`/appointments/${appointment.id}`}
-              aria-label={`View details for appointment with ${doctorName}`}
-            >
-              <ArrowRight className="h-4 w-4" />
-              <span className="sr-only">View details</span>
-            </Link>
-          </Button>
         </div>
-      </CardContent>
-    </Card>
+
+        <div className="mt-4 pt-4 border-t border-gray-50 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-xs text-gray-500 font-medium">
+            <ConsultationIcon className="h-3.5 w-3.5" />
+            <span className="capitalize">{appointment.consultationType.replace('-', ' ')} Visit</span>
+          </div>
+
+          <Link
+            href={`/appointments/${appointment.id}`}
+            className="text-sm font-semibold text-medical-blue hover:text-medical-blue-dark flex items-center gap-1 transition-colors active:scale-95"
+          >
+            Details
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+      </div>
+    </div>
   );
 }

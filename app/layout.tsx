@@ -1,43 +1,22 @@
-import type { Metadata } from "next";
+import type { Viewport } from "next";
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
-import { AuthKitProvider } from '@workos-inc/authkit-nextjs/components';
 import { QueryProvider } from '@/components/providers/query-provider';
+import { CapacitorProvider } from '@/components/providers/capacitor-provider';
+import { AuthKitProvider } from '@workos-inc/authkit-nextjs/components';
+import { UserSessionProvider } from '@/lib/contexts/user-session-context';
+import { NetworkStatus } from '@/components/mobile/network-status';
 
-export const metadata: Metadata = {
-  title: {
-    default: "Patient Portal - Healthcare Management",
-    template: "%s | Patient Portal"
-  },
-  description: "Manage your healthcare journey with our comprehensive patient portal. Book appointments, access medical records, consult with doctors via video, and connect with the health community.",
-  keywords: ["healthcare", "patient portal", "telemedicine", "medical records", "appointments", "video consultation"],
-  authors: [{ name: "Healthcare Platform" }],
-  openGraph: {
-    type: "website",
-    locale: "en_US",
-    title: "Patient Portal - Healthcare Management",
-    description: "Manage your healthcare journey with our comprehensive patient portal",
-    siteName: "Patient Portal",
-  },
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 5,
-    userScalable: true,
-  },
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+    { media: "(prefers-color-scheme: light)", color: "#0066FF" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a2540" },
   ],
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
-    title: "Patient Portal",
-  },
-  formatDetection: {
-    telephone: true,
-    email: true,
-  },
 };
 
 export default function RootLayout({
@@ -54,17 +33,56 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Patient Portal" />
       </head>
-      <body className="antialiased">
-        <a 
-          href="#main-content" 
-          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-        >
-          Skip to main content
-        </a>
-        <QueryProvider>
-          <AuthKitProvider>{children}</AuthKitProvider>
-          <Toaster position="top-right" />
-        </QueryProvider>
+      <body className="antialiased min-h-screen overflow-x-hidden safe-area">
+        <AuthKitProvider>
+          <UserSessionProvider>
+            <CapacitorProvider>
+              <QueryProvider>
+                <NetworkStatus />
+                {children}
+                <Toaster
+                  position="top-center"
+                  toastOptions={{
+                    className: '!bg-white !text-gray-900 !shadow-airbnb-card !rounded-airbnb-lg !border !border-gray-100 !font-medium',
+                    duration: 4000,
+                    style: {
+                      padding: '12px 16px',
+                    },
+                    success: {
+                      duration: 3000,
+                      iconTheme: {
+                        primary: '#16a34a',
+                        secondary: '#f0fdf4',
+                      },
+                      style: {
+                        borderLeft: '4px solid #16a34a',
+                      },
+                    },
+                    error: {
+                      duration: 5000,
+                      iconTheme: {
+                        primary: '#dc2626',
+                        secondary: '#fef2f2',
+                      },
+                      style: {
+                        borderLeft: '4px solid #dc2626',
+                      },
+                    },
+                    loading: {
+                      style: {
+                        borderLeft: '4px solid #3b82f6',
+                      },
+                    },
+                  }}
+                  containerStyle={{
+                    top: 24,
+                  }}
+                  reverseOrder={false}
+                />
+              </QueryProvider>
+            </CapacitorProvider>
+          </UserSessionProvider>
+        </AuthKitProvider>
       </body>
     </html>
   );

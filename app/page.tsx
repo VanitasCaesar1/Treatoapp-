@@ -1,132 +1,157 @@
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, Video, FileText, Users, Pill, ClipboardList } from "lucide-react";
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { Calendar, Video, FileText, Shield } from 'lucide-react';
+import { Preferences } from '@capacitor/preferences';
+import { Capacitor } from '@capacitor/core';
+
+const onboardingSlides = [
+  {
+    icon: Calendar,
+    title: 'Book Appointments',
+    description: 'Schedule appointments with top doctors at your convenience. View availability and book instantly.',
+    color: 'bg-blue-500',
+  },
+  {
+    icon: Video,
+    title: 'Video Consultations',
+    description: 'Connect with healthcare providers through secure video calls from anywhere.',
+    color: 'bg-green-500',
+  },
+  {
+    icon: FileText,
+    title: 'Medical Records',
+    description: 'Access your complete medical history, prescriptions, and vital signs all in one place.',
+    color: 'bg-purple-500',
+  },
+  {
+    icon: Shield,
+    title: 'Secure & Private',
+    description: 'Your health data is encrypted and protected with industry-leading security standards.',
+    color: 'bg-orange-500',
+  },
+];
 
 export default function Home() {
+  const router = useRouter();
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [isChecking, setIsChecking] = useState(true);
+  const isLastSlide = currentSlide === onboardingSlides.length - 1;
+
+  useEffect(() => {
+    checkOnboardingStatus();
+  }, []);
+
+  const checkOnboardingStatus = async () => {
+    try {
+      // Check if user has completed onboarding
+      const { value } = await Preferences.get({ key: 'onboarding_completed' });
+
+      if (value === 'true') {
+        // Skip onboarding, go to dashboard
+        router.replace('/dashboard');
+      } else {
+        setIsChecking(false);
+      }
+    } catch (error) {
+      console.error('Error checking onboarding status:', error);
+      setIsChecking(false);
+    }
+  };
+
+  const markOnboardingComplete = async () => {
+    try {
+      await Preferences.set({
+        key: 'onboarding_completed',
+        value: 'true',
+      });
+    } catch (error) {
+      console.error('Error saving onboarding status:', error);
+    }
+  };
+
+  if (isChecking) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  const handleNext = () => {
+    if (currentSlide < onboardingSlides.length - 1) {
+      setCurrentSlide(currentSlide + 1);
+    }
+  };
+
+  const slide = onboardingSlides[currentSlide];
+  const Icon = slide.icon;
+
   return (
-    <div className="min-h-screen">
-      {/* Hero Section */}
-      <section className="flex flex-col items-center justify-center px-8 py-20 bg-gradient-to-b from-blue-50 to-white dark:from-blue-950 dark:to-background">
-        <div className="max-w-4xl text-center space-y-6">
-          <h1 className="text-5xl md:text-6xl font-bold tracking-tight">
-            Your Health, <span className="text-blue-600">Simplified</span>
-          </h1>
-          <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto">
-            Access quality healthcare from anywhere. Book appointments, consult with doctors online, and manage your medical records all in one place.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-            <Link href="/login">
-              <Button size="lg" className="w-full sm:w-auto">
-                Get Started
-              </Button>
-            </Link>
-            <Link href="/login">
-              <Button size="lg" variant="outline" className="w-full sm:w-auto">
-                Sign In
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </section>
+    <div className="min-h-screen bg-white flex flex-col">
+      {/* Skip Button */}
+      <div className="flex justify-end p-6">
+        <button
+          onClick={async () => {
+            await markOnboardingComplete();
+            router.push('/dashboard');
+          }}
+          className="text-sm text-gray-500 font-medium"
+        >
+          Skip
+        </button>
+      </div>
 
-      {/* Features Section */}
-      <section className="px-8 py-20 max-w-7xl mx-auto">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            Everything You Need for Better Healthcare
-          </h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Our comprehensive platform provides all the tools you need to manage your health effectively
-          </p>
+      {/* Slide Content */}
+      <div className="flex-1 flex flex-col items-center justify-center px-8 pb-8">
+        <div className={`w-32 h-32 rounded-full ${slide.color} flex items-center justify-center mb-8 shadow-2xl`}>
+          <Icon className="w-16 h-16 text-white" strokeWidth={1.5} />
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Card>
-            <CardHeader>
-              <Calendar className="h-10 w-10 text-blue-600 mb-2" />
-              <CardTitle>Easy Appointment Booking</CardTitle>
-              <CardDescription>
-                Schedule appointments with top doctors at your convenience. View availability and book instantly.
-              </CardDescription>
-            </CardHeader>
-          </Card>
+        <h1 className="text-3xl font-bold text-gray-900 text-center mb-4">
+          {slide.title}
+        </h1>
+        <p className="text-base text-gray-600 text-center leading-relaxed max-w-sm">
+          {slide.description}
+        </p>
+      </div>
 
-          <Card>
-            <CardHeader>
-              <Video className="h-10 w-10 text-blue-600 mb-2" />
-              <CardTitle>Video Consultations</CardTitle>
-              <CardDescription>
-                Connect with healthcare providers through secure video calls from the comfort of your home.
-              </CardDescription>
-            </CardHeader>
-          </Card>
+      {/* Dots Indicator */}
+      <div className="flex justify-center gap-2 mb-8">
+        {onboardingSlides.map((_, index) => (
+          <div
+            key={index}
+            className={`h-2 rounded-full transition-all ${index === currentSlide
+              ? 'w-8 bg-gray-900'
+              : 'w-2 bg-gray-300'
+              }`}
+          />
+        ))}
+      </div>
 
-          <Card>
-            <CardHeader>
-              <FileText className="h-10 w-10 text-blue-600 mb-2" />
-              <CardTitle>Medical Records</CardTitle>
-              <CardDescription>
-                Access your complete medical history, prescriptions, and vital signs all in one secure location.
-              </CardDescription>
-            </CardHeader>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <Users className="h-10 w-10 text-blue-600 mb-2" />
-              <CardTitle>Find Specialists</CardTitle>
-              <CardDescription>
-                Search and connect with qualified doctors across various specialties and locations.
-              </CardDescription>
-            </CardHeader>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <Pill className="h-10 w-10 text-blue-600 mb-2" />
-              <CardTitle>Medicine Information</CardTitle>
-              <CardDescription>
-                Search for medicines and get detailed information about prescriptions and dosages.
-              </CardDescription>
-            </CardHeader>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <ClipboardList className="h-10 w-10 text-blue-600 mb-2" />
-              <CardTitle>Health Community</CardTitle>
-              <CardDescription>
-                Share experiences and connect with others on their healthcare journey in a supportive community.
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="px-8 py-20 bg-blue-600 text-white">
-        <div className="max-w-4xl mx-auto text-center space-y-6">
-          <h2 className="text-3xl md:text-4xl font-bold">
-            Ready to Take Control of Your Health?
-          </h2>
-          <p className="text-xl text-blue-100">
-            Join thousands of patients who trust our platform for their healthcare needs
-          </p>
-          <Link href="/login">
-            <Button size="lg" variant="secondary" className="mt-4">
-              Create Your Account
-            </Button>
-          </Link>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="px-8 py-8 border-t">
-        <div className="max-w-7xl mx-auto text-center text-sm text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} Patient Health App. All rights reserved.</p>
-        </div>
-      </footer>
+      {/* Bottom Button */}
+      <div className="px-6 pb-8">
+        {isLastSlide ? (
+          <button
+            onClick={async () => {
+              await markOnboardingComplete();
+              router.push('/dashboard');
+            }}
+            className="w-full bg-gray-900 text-white py-4 rounded-2xl font-medium hover:bg-gray-800 transition-colors active:scale-[0.98]"
+          >
+            Get Started
+          </button>
+        ) : (
+          <button
+            onClick={handleNext}
+            className="w-full bg-gray-900 text-white py-4 rounded-2xl font-medium hover:bg-gray-800 transition-colors active:scale-[0.98]"
+          >
+            Next
+          </button>
+        )}
+      </div>
     </div>
   );
 }

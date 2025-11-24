@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Treato</string>
+    <string name="title_activity_main">Treato</string>
+    <string name="package_name">com.treato.treato</string>
+    <string name="custom_url_scheme">com.treato.treato</string>
+</resources>

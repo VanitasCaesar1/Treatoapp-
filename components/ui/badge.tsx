@@ -1,36 +1,159 @@
-import * as React from "react"
-import { cva, type VariantProps } from "class-variance-authority"
+import { cn } from '@/lib/utils';
+import { CheckCircle, Clock, XCircle, Calendar } from 'lucide-react';
 
-import { cn } from "@/lib/utils"
+export type BadgeVariant = 
+  | 'default' 
+  | 'secondary'
+  | 'outline'
+  | 'destructive'
+  | 'confirmed' 
+  | 'pending' 
+  | 'cancelled' 
+  | 'completed'
+  | 'success'
+  | 'warning'
+  | 'error'
+  | 'info';
 
-const badgeVariants = cva(
-  "inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
-  {
-    variants: {
-      variant: {
-        default:
-          "border-transparent bg-primary text-primary-foreground shadow hover:bg-primary/80",
-        secondary:
-          "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        destructive:
-          "border-transparent bg-destructive text-destructive-foreground shadow hover:bg-destructive/80",
-        outline: "text-foreground",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-    },
-  }
-)
-
-export interface BadgeProps
-  extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof badgeVariants> {}
-
-function Badge({ className, variant, ...props }: BadgeProps) {
-  return (
-    <div className={cn(badgeVariants({ variant }), className)} {...props} />
-  )
+interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
+  children: React.ReactNode;
+  variant?: BadgeVariant;
+  icon?: React.ComponentType<{ className?: string }>;
 }
 
-export { Badge, badgeVariants }
+const variantConfig = {
+  default: {
+    bg: 'bg-gray-100',
+    text: 'text-gray-700',
+    border: 'border-gray-200',
+    icon: null,
+  },
+  secondary: {
+    bg: 'bg-gray-100',
+    text: 'text-gray-700',
+    border: 'border-gray-200',
+    icon: null,
+  },
+  outline: {
+    bg: 'bg-transparent',
+    text: 'text-gray-700',
+    border: 'border-gray-300',
+    icon: null,
+  },
+  destructive: {
+    bg: 'bg-red-50',
+    text: 'text-red-700',
+    border: 'border-red-200',
+    icon: null,
+  },
+  confirmed: {
+    bg: 'bg-green-50',
+    text: 'text-green-700',
+    border: 'border-green-200',
+    icon: CheckCircle,
+  },
+  pending: {
+    bg: 'bg-yellow-50',
+    text: 'text-yellow-700',
+    border: 'border-yellow-200',
+    icon: Clock,
+  },
+  cancelled: {
+    bg: 'bg-red-50',
+    text: 'text-red-700',
+    border: 'border-red-200',
+    icon: XCircle,
+  },
+  completed: {
+    bg: 'bg-blue-50',
+    text: 'text-blue-700',
+    border: 'border-blue-200',
+    icon: CheckCircle,
+  },
+  success: {
+    bg: 'bg-green-50',
+    text: 'text-green-700',
+    border: 'border-green-200',
+    icon: CheckCircle,
+  },
+  warning: {
+    bg: 'bg-yellow-50',
+    text: 'text-yellow-700',
+    border: 'border-yellow-200',
+    icon: Clock,
+  },
+  error: {
+    bg: 'bg-red-50',
+    text: 'text-red-700',
+    border: 'border-red-200',
+    icon: XCircle,
+  },
+  info: {
+    bg: 'bg-blue-50',
+    text: 'text-blue-700',
+    border: 'border-blue-200',
+    icon: Calendar,
+  },
+};
+
+export function Badge({
+  children,
+  variant = 'default',
+  icon: CustomIcon,
+  className,
+  ...props
+}: BadgeProps) {
+  const config = variantConfig[variant];
+  const Icon = CustomIcon || config.icon;
+
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1.5',
+        'px-3 py-1',
+        'text-xs font-semibold',
+        'rounded-full',
+        config.bg,
+        config.text,
+        className
+      )}
+      {...props}
+    >
+      {Icon && <Icon className="w-3 h-3" />}
+      {children}
+    </span>
+  );
+}
+
+// Preset badge components for common appointment statuses
+export function ConfirmedBadge({ className }: { className?: string }) {
+  return (
+    <Badge variant="confirmed" className={className}>
+      Confirmed
+    </Badge>
+  );
+}
+
+export function PendingBadge({ className }: { className?: string }) {
+  return (
+    <Badge variant="pending" className={className}>
+      Pending
+    </Badge>
+  );
+}
+
+export function CancelledBadge({ className }: { className?: string }) {
+  return (
+    <Badge variant="cancelled" className={className}>
+      Cancelled
+    </Badge>
+  );
+}
+
+export function CompletedBadge({ className }: { className?: string }) {
+  return (
+    <Badge variant="completed" className={className}>
+      Completed
+    </Badge>
+  );
+}

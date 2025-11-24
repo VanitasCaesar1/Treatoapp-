@@ -1,26 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-    cacheComponents: true,
   reactCompiler: true,
-  experimental: {
-    optimizePackageImports: ['lucide-react'],
-  },
+
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production',
   },
-  async headers() {
-    return [
-      {
-        source: '/(.*)',
-        headers: [
-          { key: 'X-Content-Type-Options', value: 'nosniff' },
-          { key: 'X-Frame-Options', value: 'DENY' },
-          { key: 'X-XSS-Protection', value: '1; mode=block' },
-        ],
-      },
-    ];
-  },
   poweredByHeader: false,
+  // Configuration for mobile app deployment
+  images: {
+    domains: [], // Add any external image domains here
+  },
 };
 
 module.exports = nextConfig;

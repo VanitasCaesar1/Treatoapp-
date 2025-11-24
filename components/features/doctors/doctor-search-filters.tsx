@@ -1,19 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, SlidersHorizontal, X } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { Search, SlidersHorizontal, X, Star, MapPin, Calendar, Check } from 'lucide-react';
+import { useKeyboard } from '@/lib/hooks/use-keyboard';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Card, CardContent } from '@/components/ui/card';
+import { BottomSheet } from '@/components/ui/bottom-sheet';
+import { SelectMobile } from '@/components/ui/select-mobile';
+import { FloatingLabelInput } from '@/components/ui/input-floating';
 import { DoctorSearchFilters as Filters } from '@/lib/types/doctor';
+import { cn } from '@/lib/utils';
 
 interface DoctorSearchFiltersProps {
   filters: Filters;
@@ -33,14 +28,13 @@ const SPECIALTIES = [
   'Radiology',
 ];
 
-const LANGUAGES = [
-  'English',
-  'Spanish',
-  'French',
-  'German',
-  'Chinese',
-  'Hindi',
-  'Arabic',
+const QUICK_FILTERS = [
+  { label: 'All', filters: {} },
+  { label: 'Top Rated', filters: { rating: 4.5 } },
+  { label: 'Experienced', filters: { experience: 10 } },
+  { label: 'Cardiology', filters: { specialty: 'cardiology' } },
+  { label: 'Dermatology', filters: { specialty: 'dermatology' } },
+  { label: 'Pediatrics', filters: { specialty: 'pediatrics' } },
 ];
 
 export function DoctorSearchFilters({
@@ -48,189 +42,226 @@ export function DoctorSearchFilters({
   onFiltersChange,
 }: DoctorSearchFiltersProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [tempFilters, setTempFilters] = useState<Filters>(filters);
+  const { hideKeyboard } = useKeyboard();
 
-  const handleFilterChange = (key: keyof Filters, value: any) => {
-    onFiltersChange({ ...filters, [key]: value });
+  // Sync temp filters when sheet opens
+  const openFilters = () => {
+    setTempFilters(filters);
+    setShowAdvanced(true);
   };
 
-  const handleSearch = () => {
-    // Search query can be used for general text search if backend supports it
-    onFiltersChange({ ...filters });
+  const applyFilters = () => {
+    onFiltersChange({ ...tempFilters, page: 1 });
+    setShowAdvanced(false);
   };
 
-  const clearFilters = () => {
-    setSearchQuery('');
+  const handleTempFilterChange = (key: keyof Filters, value: any) => {
+    setTempFilters(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleQuickFilter = async (quickFilters: any) => {
+    await hideKeyboard();
+
+    // Check if this quick filter is already active
+    if (isQuickFilterActive(quickFilters)) {
+      // If clicking "All", do nothing (it's the default)
+      if (Object.keys(quickFilters).length === 0) return;
+
+      // Clear specific filters
+      const newFilters = { ...filters };
+      Object.keys(quickFilters).forEach(key => {
+        delete (newFilters as any)[key];
+      });
+      onFiltersChange({ ...newFilters, page: 1 });
+    } else {
+      // Apply new filters
+      onFiltersChange({ ...filters, ...quickFilters, page: 1 });
+    }
+  };
+
+  const clearAllFilters = () => {
     onFiltersChange({
       page: 1,
       pageSize: 20,
     });
+    setTempFilters({
+      page: 1,
+      pageSize: 20,
+    });
+    setShowAdvanced(false);
   };
 
   const hasActiveFilters =
     filters.specialty ||
     filters.location ||
-    filters.date ||
-    filters.minRating ||
-    filters.maxFee ||
-    (filters.languages && filters.languages.length > 0);
+    filters.rating ||
+    filters.experience;
+
+  const isQuickFilterActive = (quickFilters: any) => {
+    if (Object.keys(quickFilters).length === 0) {
+      return !hasActiveFilters && !filters.query;
+    }
+    return Object.keys(quickFilters).every(
+      (key) => filters[key as keyof Filters] === quickFilters[key]
+    );
+  };
+
+  const activeFilterCount = [
+    filters.specialty,
+    filters.location,
+    filters.rating,
+    filters.experience
+  ].filter(Boolean).length;
 
   return (
-    <div className="space-y-4">
-      <div className="flex gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search doctors by name, specialty, or location..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-            className="pl-9"
-          />
-        </div>
-        <Button onClick={handleSearch}>Search</Button>
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => setShowAdvanced(!showAdvanced)}
-          aria-label="Toggle filters"
+    <div className="space-y-3 sticky top-[72px] z-30 bg-gray-50/95 backdrop-blur-sm py-2 -mx-4 px-4 border-b border-gray-200/50">
+      <div className="flex gap-3 items-center">
+        {/* Filter Button */}
+        <button
+          onClick={openFilters}
+          className={cn(
+            "flex items-center justify-center w-10 h-10 rounded-xl border transition-all shrink-0 relative",
+            hasActiveFilters
+              ? "bg-medical-blue border-medical-blue text-white shadow-md"
+              : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+          )}
         >
-          <SlidersHorizontal className="h-4 w-4" />
-        </Button>
+          <SlidersHorizontal className="h-5 w-5" />
+          {activeFilterCount > 0 && (
+            <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white">
+              {activeFilterCount}
+            </span>
+          )}
+        </button>
+
+        {/* Horizontal Scrollable Chips */}
+        <div className="flex-1 overflow-x-auto scrollbar-hide">
+          <div className="flex gap-2 pr-4">
+            {QUICK_FILTERS.map((qf) => {
+              const isActive = isQuickFilterActive(qf.filters);
+              return (
+                <button
+                  key={qf.label}
+                  onClick={() => handleQuickFilter(qf.filters)}
+                  className={cn(
+                    "flex-shrink-0 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all border whitespace-nowrap",
+                    isActive
+                      ? "bg-gray-900 text-white border-gray-900 shadow-sm"
+                      : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
+                  )}
+                >
+                  {qf.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
-      {showAdvanced && (
-        <Card>
-          <CardContent className="pt-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="specialty">Specialty</Label>
-                <Select
-                  value={filters.specialty || ''}
-                  onValueChange={(value) =>
-                    handleFilterChange('specialty', value || undefined)
-                  }
-                >
-                  <SelectTrigger id="specialty">
-                    <SelectValue placeholder="Select specialty" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">All Specialties</SelectItem>
-                    {SPECIALTIES.map((specialty) => (
-                      <SelectItem key={specialty} value={specialty.toLowerCase()}>
-                        {specialty}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+      {/* Advanced Filters Bottom Sheet */}
+      <BottomSheet
+        isOpen={showAdvanced}
+        onClose={() => setShowAdvanced(false)}
+        title="Filters"
+        size="lg"
+      >
+        <div className="flex flex-col h-full">
+          <div className="flex-1 overflow-y-auto p-5 space-y-6">
+            {/* Specialty */}
+            <div className="space-y-3">
+              <label className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                <Check className="h-4 w-4 text-medical-blue" />
+                Specialty
+              </label>
+              <SelectMobile
+                label="Select Specialty"
+                value={tempFilters.specialty || ''}
+                onChange={(val) => handleTempFilterChange('specialty', val)}
+                options={[
+                  { value: '', label: 'All Specialties' },
+                  ...SPECIALTIES.map(s => ({ value: s.toLowerCase(), label: s }))
+                ]}
+              />
+            </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="location">Location</Label>
-                <Input
-                  id="location"
-                  placeholder="City or ZIP code"
-                  value={filters.location || ''}
-                  onChange={(e) =>
-                    handleFilterChange('location', e.target.value || undefined)
-                  }
-                />
-              </div>
+            {/* Location */}
+            <div className="space-y-3">
+              <label className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-medical-blue" />
+                Location
+              </label>
+              <FloatingLabelInput
+                label="City or Zip Code"
+                value={tempFilters.location || ''}
+                onChange={(e) => handleTempFilterChange('location', e.target.value)}
+              />
+            </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="date">Available Date</Label>
-                <Input
-                  id="date"
-                  type="date"
-                  value={filters.date || ''}
-                  onChange={(e) =>
-                    handleFilterChange('date', e.target.value || undefined)
-                  }
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="minRating">Minimum Rating</Label>
-                <Select
-                  value={filters.minRating?.toString() || ''}
-                  onValueChange={(value) =>
-                    handleFilterChange(
-                      'minRating',
-                      value ? parseFloat(value) : undefined
-                    )
-                  }
-                >
-                  <SelectTrigger id="minRating">
-                    <SelectValue placeholder="Any rating" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">Any Rating</SelectItem>
-                    <SelectItem value="4.5">4.5+ Stars</SelectItem>
-                    <SelectItem value="4.0">4.0+ Stars</SelectItem>
-                    <SelectItem value="3.5">3.5+ Stars</SelectItem>
-                    <SelectItem value="3.0">3.0+ Stars</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="maxFee">Max Consultation Fee</Label>
-                <Input
-                  id="maxFee"
-                  type="number"
-                  placeholder="Enter amount"
-                  value={filters.maxFee || ''}
-                  onChange={(e) =>
-                    handleFilterChange(
-                      'maxFee',
-                      e.target.value ? parseFloat(e.target.value) : undefined
-                    )
-                  }
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="language">Language</Label>
-                <Select
-                  value={filters.languages?.[0] || ''}
-                  onValueChange={(value) =>
-                    handleFilterChange(
-                      'languages',
-                      value ? [value] : undefined
-                    )
-                  }
-                >
-                  <SelectTrigger id="language">
-                    <SelectValue placeholder="Any language" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">Any Language</SelectItem>
-                    {LANGUAGES.map((language) => (
-                      <SelectItem key={language} value={language.toLowerCase()}>
-                        {language}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            {/* Rating */}
+            <div className="space-y-3">
+              <label className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                <Star className="h-4 w-4 text-medical-blue" />
+                Minimum Rating
+              </label>
+              <div className="grid grid-cols-4 gap-2">
+                {[4.5, 4.0, 3.5, 3.0].map((rating) => (
+                  <button
+                    key={rating}
+                    onClick={() => handleTempFilterChange('rating', tempFilters.rating === rating ? undefined : rating)}
+                    className={cn(
+                      "flex flex-col items-center justify-center p-2 rounded-xl border transition-all",
+                      tempFilters.rating === rating
+                        ? "bg-yellow-50 border-yellow-400 text-yellow-700"
+                        : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                    )}
+                  >
+                    <span className="text-sm font-bold">{rating}+</span>
+                    <Star className={cn("h-3 w-3 mt-1", tempFilters.rating === rating ? "fill-yellow-500 text-yellow-500" : "text-gray-400")} />
+                  </button>
+                ))}
               </div>
             </div>
 
-            {hasActiveFilters && (
-              <div className="mt-4 flex justify-end">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearFilters}
-                  className="gap-2"
-                >
-                  <X className="h-4 w-4" />
-                  Clear Filters
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+            {/* Experience */}
+            <div className="space-y-3">
+              <label className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-medical-blue" />
+                Experience
+              </label>
+              <SelectMobile
+                label="Minimum Experience"
+                value={tempFilters.experience?.toString() || ''}
+                onChange={(val) => handleTempFilterChange('experience', val ? parseInt(val) : undefined)}
+                options={[
+                  { value: '', label: 'Any Experience' },
+                  { value: '5', label: '5+ Years' },
+                  { value: '10', label: '10+ Years' },
+                  { value: '15', label: '15+ Years' },
+                  { value: '20', label: '20+ Years' },
+                ]}
+              />
+            </div>
+          </div>
+
+          {/* Footer Actions */}
+          <div className="p-5 border-t border-gray-100 bg-white space-y-3">
+            <Button
+              className="w-full h-12 rounded-full bg-medical-blue hover:bg-medical-blue-dark text-white font-semibold text-base shadow-lg shadow-blue-200"
+              onClick={applyFilters}
+            >
+              Show Results
+            </Button>
+            <Button
+              variant="ghost"
+              className="w-full rounded-full text-gray-500 hover:bg-gray-50"
+              onClick={clearAllFilters}
+            >
+              Clear All Filters
+            </Button>
+          </div>
+        </div>
+      </BottomSheet>
     </div>
   );
 }

@@ -10,35 +10,33 @@ import { PaginatedResponse } from '@/lib/types/api';
 /**
  * Search for doctors with filters
  */
-export async function searchDoctors(
-  filters: DoctorSearchFilters
-): Promise<PaginatedResponse<Doctor>> {
-  return apiClient.get<PaginatedResponse<Doctor>>('/api/doctors/search', {
-    params: filters,
+export async function searchDoctors(params: DoctorSearchFilters = {}): Promise<PaginatedResponse<Doctor>> {
+  return apiClient.get<PaginatedResponse<Doctor>>('/doctors/search', {
+    params,
   });
 }
 
 /**
- * Get a specific doctor's profile by ID
+ * Get a doctor by ID
  */
-export async function getDoctor(id: string): Promise<Doctor> {
-  return apiClient.get<Doctor>(`/api/doctors/${id}`);
+export async function getDoctorById(id: string): Promise<Doctor> {
+  return apiClient.get<Doctor>(`/doctors/${id}`);
 }
 
 /**
- * Get a doctor's schedules
+ * Get doctor's available schedules
  */
 export async function getDoctorSchedules(
   doctorId: string
 ): Promise<DoctorSchedule[]> {
-  return apiClient.get<DoctorSchedule[]>(`/api/doctors/${doctorId}/schedules`);
+  return apiClient.get<DoctorSchedule[]>(`/doctors/${doctorId}/schedules`);
 }
 
 /**
- * Get a doctor's consultation fees
+ * Get doctor's consultation fees
  */
 export async function getDoctorFees(
   doctorId: string
 ): Promise<ConsultationFee[]> {
-  return apiClient.get<ConsultationFee[]>(`/api/doctors/${doctorId}/fees`);
+  return apiClient.get<ConsultationFee[]>(`/doctors/${doctorId}/fees`);
 }

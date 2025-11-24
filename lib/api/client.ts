@@ -1,4 +1,5 @@
-import { withAuth } from '@workos-inc/authkit-nextjs';
+// Note: For client-side API calls, we'll use cookies for authentication
+// WorkOS handles JWT tokens via HTTP-only cookies automatically
 
 export interface APIError {
   status: number;
@@ -32,25 +33,12 @@ class APIClient {
   private defaultTimeout: number = 30000;
 
   constructor() {
-    this.baseURL = process.env.NEXT_PUBLIC_API_GATEWAY_URL || 'http://localhost:8080';
-  }
-
-  private async getAuthToken(): Promise<string | null> {
-    try {
-      const session = await withAuth();
-      if ('accessToken' in session) {
-        return session.accessToken || null;
-      }
-      return null;
-    } catch (error) {
-      console.error('Failed to get access token:', error);
-      return null;
-    }
+    this.baseURL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080';
   }
 
   private buildURL(endpoint: string, params?: Record<string, any>): string {
     const url = new URL(endpoint, this.baseURL);
-    
+
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
@@ -58,8 +46,15 @@ class APIClient {
         }
       });
     }
-    
+
     return url.toString();
+  }
+
+  private async getAuthHeaders(): Promise<Record<string, string>> {
+    // The proxy route handles authentication, so we only need basic headers
+    return {
+      'Accept': 'application/json',
+    };
   }
 
   private async request<T>(
@@ -69,22 +64,20 @@ class APIClient {
     body?: any
   ): Promise<T> {
     const { headers = {}, params, retries = this.defaultRetries, timeout = this.defaultTimeout } = config;
-    
-    const token = await this.getAuthToken();
-    
+
+    // Get authentication headers
+    const authHeaders = await this.getAuthHeaders();
+
     const requestHeaders: Record<string, string> = {
       'Content-Type': 'application/json',
+      ...authHeaders,
       ...headers,
     };
 
-    if (token) {
-      requestHeaders['Authorization'] = `Bearer ${token}`;
-    }
-
     const url = this.buildURL(endpoint, params);
-    
+
     let lastError: APIClientError | null = null;
-    
+
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
         const controller = new AbortController();
@@ -95,13 +88,14 @@ class APIClient {
           headers: requestHeaders,
           body: body ? JSON.stringify(body) : undefined,
           signal: controller.signal,
+          credentials: 'include', // Send cookies for auth
         });
 
         clearTimeout(timeoutId);
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
-          
+
           const error = new APIClientError(
             response.status,
             this.getErrorCode(response.status),
@@ -109,19 +103,25 @@ class APIClient {
             errorData.details
           );
 
+          // Handle 401 Unauthorized - token might be expired
+          if (response.status === 401) {
+            console.warn('Unauthorized request - token may be expired');
+            throw error;
+          }
+
           // Don't retry client errors (4xx)
           if (response.status >= 400 && response.status < 500) {
             throw error;
           }
 
           lastError = error;
-          
+
           // Retry server errors (5xx)
           if (attempt < retries) {
             await this.delay(this.getRetryDelay(attempt));
             continue;
           }
-          
+
           throw error;
         }
 
@@ -133,7 +133,7 @@ class APIClient {
 
         const data = await response.json();
         return data as T;
-        
+
       } catch (error) {
         if (error instanceof APIClientError) {
           throw error;
@@ -223,6 +223,117 @@ class APIClient {
 
   async patch<T>(endpoint: string, data?: any, config?: RequestConfig): Promise<T> {
     return this.request<T>('PATCH', endpoint, config, data);
+  }
+
+  // Healthcare-specific API methods
+
+  // Patient endpoints
+  async getPatientProfile(patientId: string) {
+    return this.get(`/api/patients/${patientId}`);
+  }
+
+  async updatePatientProfile(patientId: string, data: any) {
+    return this.put(`/api/patients/${patientId}`, data);
+  }
+
+  async getPatientMedicalHistory(patientId: string) {
+    return this.get(`/api/patients/${patientId}/medical-history`);
+  }
+
+  async getPatientVitals(patientId: string) {
+    return this.get(`/api/emr/patients/${patientId}/vitals`);
+  }
+
+  async getPatientEncounters(patientId: string) {
+    return this.get(`/api/emr/patients/${patientId}/encounters`);
+  }
+
+  // Doctor endpoints
+  async searchDoctors(params: any) {
+    return this.get('/api/doctors/search', { params });
+  }
+
+  async getDoctorProfile(doctorId: string) {
+    return this.get(`/api/doctors/${doctorId}`);
+  }
+
+  async getDoctorSchedules(doctorId: string) {
+    return this.get(`/doctors/${doctorId}/schedules`);
+  }
+
+  // Appointment endpoints
+  async getAppointments(params?: any) {
+    return this.get('/api/appointments', { params });
+  }
+
+  async getAppointment(appointmentId: string) {
+    return this.get(`/api/appointments/${appointmentId}`);
+  }
+
+  async createAppointment(data: any) {
+    return this.post('/api/appointments', data);
+  }
+
+  async updateAppointment(appointmentId: string, data: any) {
+    return this.put(`/api/appointments/${appointmentId}`, data);
+  }
+
+  async cancelAppointment(appointmentId: string) {
+    return this.delete(`/api/appointments/${appointmentId}`);
+  }
+
+  // Medical Records endpoints
+  async getMedicalRecords(patientId: string) {
+    return this.get(`/api/emr/patients/${patientId}/encounters`);
+  }
+
+  async createEncounter(data: any) {
+    return this.post('/api/emr/encounters', data);
+  }
+
+  async recordVitals(data: any) {
+    return this.post('/api/emr/vitals', data);
+  }
+
+  // Search endpoints
+  async searchPatients(query: string) {
+    return this.get('/api/patients/search', { params: { q: query } });
+  }
+
+  async searchMedicines(query: string) {
+    return this.get('/api/medicines/search', { params: { q: query } });
+  }
+
+  // User profile endpoints
+  // For current user (convenience route)
+  async getCurrentUserProfile() {
+    return this.get('/user/profile');
+  }
+
+  async updateCurrentUserProfile(data: any) {
+    return this.put('/user/profile', data);
+  }
+
+  // For specific user by ID
+  async getUserProfile(userId: string) {
+    return this.get(`/users/${userId}/profile`);
+  }
+
+  async updateUserProfile(userId: string, data: any) {
+    return this.put(`/users/${userId}/profile`, data);
+  }
+
+  // User roles endpoints
+  async getUserRoles(userId: string) {
+    return this.get(`/users/${userId}/roles`);
+  }
+
+  async addUserRole(userId: string, roleData: any) {
+    return this.post(`/users/${userId}/roles`, roleData);
+  }
+
+  async removeUserRole(userId: string, roleId: string) {
+    return this.delete(`/users/${userId}/roles/${roleId}`);
   }
 }
 

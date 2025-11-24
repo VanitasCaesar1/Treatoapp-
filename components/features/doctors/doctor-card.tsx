@@ -1,89 +1,129 @@
 'use client';
 
 import Link from 'next/link';
-import { Star, MapPin, Calendar, DollarSign } from 'lucide-react';
-import { Card, CardContent, CardFooter } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Star, MapPin, Calendar, Clock, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Doctor } from '@/lib/types/doctor';
+import { cn } from '@/lib/utils';
+import { useHaptics } from '@/lib/hooks/use-haptics';
 
 interface DoctorCardProps {
   doctor: Doctor;
 }
 
 export function DoctorCard({ doctor }: DoctorCardProps) {
-  const fullName = `${doctor.firstName} ${doctor.lastName}`;
-  const initials = `${doctor.firstName[0]}${doctor.lastName[0]}`;
+  const { medium, selectionChanged } = useHaptics();
+  const fullName = `${doctor.firstName || ''} ${doctor.lastName || ''}`.trim() || 'Unknown Doctor';
+  const initials = `${doctor.firstName?.[0] || ''}${doctor.lastName?.[0] || ''}`.toUpperCase() || 'DR';
+
+  // Handle different field names from backend
+  const specialty = doctor.specialty || (doctor.specialization && doctor.specialization[0]) || 'General';
+  const experience = doctor.experience || doctor.years_of_experience || doctor.yearsOfExperience || 0;
+  const profileImage = doctor.profileImage || doctor.profile_image;
+  const rating = doctor.rating || 0;
+  const price = doctor.price;
+
+  // Mock availability for demo (in real app, this would come from backend)
+  const isAvailableToday = Math.random() > 0.3;
+
+  const handleBookPress = (e: React.MouseEvent) => {
+    e.preventDefault();
+    medium();
+    window.location.href = `/book-appointment/${doctor.id}`;
+  };
 
   return (
-    <Card 
-      className="hover:shadow-lg transition-shadow"
-      role="article"
-      aria-label={`Doctor profile for ${fullName}`}
-    >
-      <CardContent className="pt-6">
+    <Link href={`/doctor/${doctor.id}`} className="block group">
+      <div
+        className="bg-white rounded-3xl p-4 shadow-sm border border-gray-100 active:scale-[0.98] transition-all duration-200 relative overflow-hidden"
+        role="article"
+        aria-label={`Doctor profile for ${fullName}`}
+        onClick={() => selectionChanged()}
+      >
+        {/* Top Badge Section */}
+        <div className="flex justify-between items-start mb-3">
+          {isAvailableToday ? (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-green-50 text-green-700 text-[10px] font-bold uppercase tracking-wide border border-green-100">
+              <Clock className="h-3 w-3" />
+              Available Today
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gray-50 text-gray-500 text-[10px] font-bold uppercase tracking-wide border border-gray-100">
+              Next Available: Tomorrow
+            </span>
+          )}
+
+          {rating >= 4.8 && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-yellow-50 text-yellow-700 text-[10px] font-bold uppercase tracking-wide border border-yellow-100">
+              <ShieldCheck className="h-3 w-3" />
+              Top Rated
+            </span>
+          )}
+        </div>
+
         <div className="flex gap-4">
-          <Avatar className="h-16 w-16">
-            <AvatarImage src={doctor.profileImage} alt={`${fullName}'s profile picture`} />
-            <AvatarFallback>{initials}</AvatarFallback>
-          </Avatar>
-          
-          <div className="flex-1 space-y-2">
-            <div>
-              <h3 className="font-semibold text-lg">{fullName}</h3>
-              <p className="text-sm text-muted-foreground">{doctor.specialty}</p>
+          {/* Avatar */}
+          <div className="relative flex-shrink-0">
+            <Avatar className="h-20 w-20 rounded-2xl ring-4 ring-gray-50 shadow-sm group-hover:ring-blue-50 transition-all">
+              <AvatarImage src={profileImage} alt={`${fullName}'s profile picture`} className="object-cover" />
+              <AvatarFallback className="bg-gradient-to-br from-blue-100 to-blue-50 text-medical-blue font-bold text-xl rounded-2xl">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+            {/* Online Status Indicator */}
+            <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-white rounded-full flex items-center justify-center shadow-sm">
+              <div className="w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
             </div>
+          </div>
 
-            {doctor.rating && (
-              <div className="flex items-center gap-1 text-sm" role="group" aria-label="Doctor rating">
-                <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" aria-hidden="true" />
-                <span className="font-medium" aria-label={`Rating: ${doctor.rating.toFixed(1)} out of 5 stars`}>
-                  {doctor.rating.toFixed(1)}
-                </span>
-                {doctor.reviewCount && (
-                  <span className="text-muted-foreground" aria-label={`Based on ${doctor.reviewCount} reviews`}>
-                    ({doctor.reviewCount} reviews)
-                  </span>
-                )}
+          {/* Info */}
+          <div className="flex-1 min-w-0 flex flex-col justify-center">
+            <h3 className="font-bold text-lg text-gray-900 leading-tight mb-1 truncate pr-2">
+              {fullName}
+            </h3>
+            <p className="text-medical-blue font-medium text-sm mb-2">{specialty}</p>
+
+            <div className="flex items-center gap-3 text-xs text-gray-500 font-medium">
+              <div className="flex items-center gap-1 bg-gray-50 px-2 py-1 rounded-lg">
+                <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+                <span className="text-gray-900">{rating > 0 ? rating.toFixed(1) : 'New'}</span>
               </div>
-            )}
 
-            <div className="flex flex-wrap gap-2" role="list" aria-label="Subspecialties">
-              {doctor.subSpecialties?.slice(0, 2).map((subspecialty) => (
-                <Badge key={subspecialty} variant="secondary" role="listitem">
-                  {subspecialty}
-                </Badge>
-              ))}
-            </div>
+              <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
 
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-              <div className="flex items-center gap-1">
-                <Calendar className="h-4 w-4" aria-hidden="true" />
-                <span>{doctor.yearsOfExperience} years experience</span>
-              </div>
-              {doctor.languages && doctor.languages.length > 0 && (
-                <span aria-label={`Languages spoken: ${doctor.languages.join(', ')}`}>
-                  • {doctor.languages.join(', ')}
-                </span>
+              <span>{experience} yrs exp</span>
+
+              {doctor.location && (
+                <>
+                  <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
+                  <span className="truncate max-w-[80px]">{doctor.location}</span>
+                </>
               )}
             </div>
           </div>
         </div>
-      </CardContent>
 
-      <CardFooter className="flex flex-col sm:flex-row gap-2 sm:justify-between sm:items-center">
-        <Button variant="outline" asChild className="w-full sm:w-auto">
-          <Link href={`/doctors/${doctor.id}`} aria-label={`View full profile of ${fullName}`}>
-            View Profile
-          </Link>
-        </Button>
-        <Button asChild className="w-full sm:w-auto">
-          <Link href={`/appointments/book?doctorId=${doctor.id}`} aria-label={`Book appointment with ${fullName}`}>
+        {/* Action Button */}
+        <div className="mt-4 pt-3 border-t border-gray-50 flex items-center justify-between gap-3">
+          <div className="text-xs text-gray-400 font-medium">
+            {price ? (
+              <>
+                Starts from <span className="text-gray-900 font-bold text-sm">₹{price}</span>
+              </>
+            ) : (
+              <span className="text-gray-500 font-medium text-sm">Fee on Request</span>
+            )}
+          </div>
+          <Button
+            size="sm"
+            className="rounded-full px-6 bg-medical-blue hover:bg-medical-blue-dark shadow-md shadow-blue-100 font-semibold h-9"
+            onClick={handleBookPress}
+          >
             Book Appointment
-          </Link>
-        </Button>
-      </CardFooter>
-    </Card>
+          </Button>
+        </div>
+      </div>
+    </Link>
   );
 }

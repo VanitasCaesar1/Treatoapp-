@@ -1,34 +1,34 @@
-import { withAuth } from '@workos-inc/authkit-nextjs';
-import { redirect } from 'next/navigation';
-import { Sidebar } from '@/components/layout/sidebar';
 import { Header } from '@/components/layout/header';
-import { MobileBottomNav } from '@/components/layout/mobile-bottom-nav';
+import MobileBottomNav from '@/components/layout/mobile-bottom-nav';
+import { withAuth } from '@workos-inc/authkit-nextjs';
+import { DashboardClientWrapper } from '@/components/layout/dashboard-client-wrapper';
+import { CallNotificationProvider } from '@/components/providers/CallNotificationProvider';
+import { IncomingCallScreen } from '@/components/video/IncomingCallScreen';
 
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { user } = await withAuth();
-
-  if (!user) {
-    redirect('/login');
-  }
+  // If the user isn't signed in, they will be automatically redirected to AuthKit
+  const { user } = await withAuth({ ensureSignedIn: true });
 
   return (
-    <div className="flex min-h-screen">
-      {/* Desktop Sidebar - hidden on mobile */}
-      <Sidebar className="hidden lg:flex" />
-      
-      <div className="flex-1 flex flex-col">
-        <Header user={user} />
-        <main id="main-content" className="flex-1 p-4 md:p-6 pb-20 lg:pb-6 bg-background" role="main">
-          {children}
-        </main>
-        
-        {/* Mobile Bottom Navigation */}
-        <MobileBottomNav />
-      </div>
-    </div>
+    <CallNotificationProvider>
+      <DashboardClientWrapper>
+        <div className="flex flex-col min-h-screen bg-gray-50 max-w-[480px] mx-auto">
+          <Header />
+          <main id="main-content" className="flex-1 px-4 pb-28 pt-2" role="main">
+            {children}
+          </main>
+
+          {/* Mobile Bottom Navigation */}
+          <MobileBottomNav />
+        </div>
+      </DashboardClientWrapper>
+
+      {/* Incoming Call Screen Overlay */}
+      <IncomingCallScreen />
+    </CallNotificationProvider>
   );
 }

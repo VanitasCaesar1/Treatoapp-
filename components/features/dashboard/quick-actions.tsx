@@ -15,89 +15,77 @@ import {
 const quickActions = [
   {
     title: 'Book Appointment',
-    description: 'Schedule a consultation with a doctor',
+    description: 'Schedule a consultation',
     icon: Calendar,
     href: '/appointments/book',
-    color: 'bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400',
+    color: 'bg-primary/10 text-primary',
   },
   {
     title: 'Find Doctors',
-    description: 'Search for healthcare providers',
+    description: 'Search healthcare providers',
     icon: Users,
     href: '/doctors',
-    color: 'bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400',
+    color: 'bg-green-500/10 text-green-600 dark:text-green-400',
   },
   {
     title: 'Medical Records',
     description: 'View your health history',
     icon: FileText,
     href: '/medical-records',
-    color: 'bg-purple-100 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400',
+    color: 'bg-purple-500/10 text-purple-600 dark:text-purple-400',
   },
   {
-    title: 'Video Consultation',
-    description: 'Join a telemedicine session',
+    title: 'Video Call',
+    description: 'Join telemedicine session',
     icon: Video,
     href: '/video',
-    color: 'bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400',
+    color: 'bg-red-500/10 text-red-600 dark:text-red-400',
   },
   {
     title: 'Community',
-    description: 'Connect with other patients',
+    description: 'Connect with patients',
     icon: MessageSquare,
     href: '/community',
-    color: 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400',
+    color: 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400',
   },
   {
-    title: 'Search Medicines',
-    description: 'Find medication information',
+    title: 'Medicines',
+    description: 'Find medication info',
     icon: Pill,
     href: '/medicines',
-    color: 'bg-pink-100 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400',
+    color: 'bg-pink-500/10 text-pink-600 dark:text-pink-400',
   },
 ];
 
 export function QuickActions() {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Quick Actions</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div 
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
-          role="list"
-          aria-label="Quick action shortcuts"
-        >
-          {quickActions.map((action) => {
-            const Icon = action.icon;
-            return (
-              <Button
-                key={action.title}
-                variant="outline"
-                className="h-auto p-4 flex flex-col items-start gap-2 hover:bg-accent"
-                asChild
-              >
-                <Link 
-                  href={action.href}
-                  role="listitem"
-                  aria-label={`${action.title}: ${action.description}`}
-                >
-                  <div className={`p-2 rounded-lg ${action.color}`} aria-hidden="true">
-                    <Icon className="h-5 w-5" />
-                  </div>
-                  <div className="text-left">
-                    <p className="font-semibold text-sm">{action.title}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {action.description}
-                    </p>
-                  </div>
-                </Link>
-              </Button>
-            );
-          })}
-        </div>
-      </CardContent>
-    </Card>
+    <div>
+      <h3 className="text-base font-semibold text-gray-900 mb-3">Quick Actions</h3>
+      <div 
+        className="grid grid-cols-3 gap-2"
+        role="list"
+        aria-label="Quick action shortcuts"
+      >
+        {quickActions.slice(0, 6).map((action) => {
+          const Icon = action.icon;
+          return (
+            <Link
+              key={action.title}
+              href={action.href}
+              role="listitem"
+              aria-label={action.title}
+              className="bg-white rounded-airbnb-lg border border-gray-200 p-4 flex flex-col items-center gap-2 hover:shadow-airbnb transition-all active:scale-95"
+            >
+              <div className="p-2.5 rounded-airbnb bg-medical-blue/10" aria-hidden="true">
+                <Icon className="h-5 w-5 text-medical-blue" />
+              </div>
+              <p className="font-semibold text-xs text-gray-900 text-center leading-tight">
+                {action.title}
+              </p>
+            </Link>
+          );
+        })}
+      </div>
+    </div>
   );
 }

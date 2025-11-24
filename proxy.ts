@@ -1,36 +1,17 @@
 import { authkitMiddleware } from '@workos-inc/authkit-nextjs';
 
+// In middleware auth mode, each page is protected by default.
+// Exceptions are configured via the `unauthenticatedPaths` option.
 export default authkitMiddleware({
   middlewareAuth: {
     enabled: true,
-    unauthenticatedPaths: [
-      '/',
-      '/login',
-      '/register',
-      '/callback',
-      '/auth/error',
-      '/api/public/:path*',
-    ],
+    unauthenticatedPaths: ['/', '/login', '/auth/error'],
   },
 });
 
+// Match against pages that require authentication
 export const config = {
   matcher: [
-    '/dashboard/:path*',
-    '/profile/:path*',
-    '/settings/:path*',
-    '/appointments/:path*',
-    '/doctors/:path*',
-    '/medical-records/:path*',
-    '/video/:path*',
-    '/community/:path*',
-    '/medicines/:path*',
-    '/templates/:path*',
-    '/api/user/:path*',
-    '/api/protected/:path*',
-    '/callback',
-    '/',
-    '/login',
-    '/register',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };

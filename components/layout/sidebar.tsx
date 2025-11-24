@@ -72,34 +72,62 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
   const pathname = usePathname();
 
   return (
-    <aside className={cn("w-64 border-r bg-card min-h-screen flex-col", className)}>
-      <div className="p-6">
-        <h2 className="text-2xl font-bold text-primary">Patient Portal</h2>
+    <aside className={cn("w-72 bg-white border-r border-gray-200 min-h-screen flex-col", className)}>
+      <div className="px-6 py-6 border-b border-gray-100">
+        <Link href="/dashboard" className="flex items-center gap-3 group">
+          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-medical-blue to-medical-blue-light flex items-center justify-center shadow-medical transition-transform group-hover:scale-105">
+            <span className="text-white font-bold text-lg">T</span>
+          </div>
+          <div>
+            <h2 className="text-lg font-bold tracking-tight text-gray-900">Treato</h2>
+            <p className="text-xs text-gray-500 font-medium">Patient Portal</p>
+          </div>
+        </Link>
       </div>
-      <nav className="px-3 space-y-1" role="navigation" aria-label="Main navigation">
+
+      <nav className="px-4 py-6 space-y-1" role="navigation" aria-label="Main navigation">
         {navigationItems.map((item) => {
           const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`);
           const Icon = item.icon;
-          
+
           return (
             <Link
               key={item.name}
               href={item.href}
               onClick={onNavigate}
               className={cn(
-                'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors',
+                'flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200',
                 isActive
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                  ? 'bg-medical-blue/10 text-medical-blue'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
               )}
               aria-current={isActive ? 'page' : undefined}
             >
-              <Icon className="h-5 w-5" aria-hidden="true" />
+              <Icon
+                className={cn(
+                  "h-5 w-5 transition-colors",
+                  isActive ? "text-medical-blue" : "text-gray-400 group-hover:text-gray-600"
+                )}
+                aria-hidden="true"
+                strokeWidth={isActive ? 2.5 : 2}
+              />
               {item.name}
             </Link>
           );
         })}
       </nav>
+
+      {/* Bottom section */}
+      <div className="mt-auto px-4 pb-8 pt-4 border-t border-gray-100">
+        <div className="px-4 py-4 rounded-xl bg-gray-50 border border-gray-100">
+          <p className="font-semibold mb-1 text-gray-900 text-sm">Need help?</p>
+          <p className="text-xs text-gray-500 mb-3">Our support team is here for you 24/7.</p>
+          <Link href="/support" className="text-medical-blue hover:text-medical-blue-dark transition-colors text-sm font-semibold flex items-center gap-1">
+            Contact support
+            <span aria-hidden="true">→</span>
+          </Link>
+        </div>
+      </div>
     </aside>
   );
 }

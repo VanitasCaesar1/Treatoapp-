@@ -208,7 +208,7 @@
     - _Requirements: 9.2, 9.3, 9.4, 9.5_
 
 - [ ] 14. Implement user profile management
-  - [ ] 14.1 Create profile page
+  - [x] 14.1 Create profile page
     - Implement `app/(dashboard)/profile/page.tsx` with editable profile form
     - Add validation for required fields
     - Display success message on update

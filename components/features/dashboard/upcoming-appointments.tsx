@@ -16,30 +16,28 @@ export function UpcomingAppointments() {
 
   if (isLoading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Upcoming Appointments</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <div>
+        <h3 className="text-base font-semibold text-gray-900 mb-3">Upcoming</h3>
+        <div className="bg-white rounded-airbnb-lg border border-gray-200 p-8 flex justify-center">
           <LoadingSpinner />
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
   }
 
   if (error) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Upcoming Appointments</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <div>
+        <h3 className="text-base font-semibold text-gray-900 mb-3">Upcoming</h3>
+        <div className="bg-white rounded-airbnb-lg border border-gray-200 p-6 text-center">
           <ErrorMessage 
             message={error instanceof Error ? error.message : 'Failed to load appointments'} 
-            onRetry={refetch} 
           />
-        </CardContent>
-      </Card>
+          <Button size="sm" onClick={() => refetch()} className="mt-4">
+            Try Again
+          </Button>
+        </div>
+      </div>
     );
   }
 
@@ -58,24 +56,28 @@ export function UpcomingAppointments() {
     .slice(0, 3) || [];
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Upcoming Appointments</CardTitle>
-        <Button variant="ghost" size="sm" asChild>
-          <Link href="/appointments">View All</Link>
-        </Button>
-      </CardHeader>
-      <CardContent>
-        {upcomingAppointments.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <Calendar className="h-12 w-12 mx-auto mb-3 opacity-50" />
-            <p>No upcoming appointments</p>
-            <Button variant="link" asChild className="mt-2">
-              <Link href="/appointments/book">Book an appointment</Link>
-            </Button>
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-base font-semibold text-gray-900">Upcoming</h3>
+        {upcomingAppointments.length > 0 && (
+          <Link href="/appointments" className="text-sm text-blue-600">
+            See all
+          </Link>
+        )}
+      </div>
+      
+      {upcomingAppointments.length === 0 ? (
+        <div className="bg-white rounded-airbnb-lg border border-gray-200 p-8 text-center">
+          <div className="w-14 h-14 bg-medical-blue/10 rounded-full flex items-center justify-center mx-auto mb-3">
+            <Calendar className="h-7 w-7 text-medical-blue" />
           </div>
-        ) : (
-          <div className="space-y-4">
+          <p className="text-sm text-gray-600 mb-4">No upcoming appointments</p>
+          <Button size="sm" asChild>
+            <Link href="/appointments/book">Book Appointment</Link>
+          </Button>
+        </div>
+      ) : (
+          <div className="space-y-2">
             {upcomingAppointments.map((appointment: Appointment) => {
               const appointmentDateTime = parseISO(
                 `${appointment.appointmentDate}T${appointment.appointmentTime}`
@@ -86,74 +88,43 @@ export function UpcomingAppointments() {
               );
 
               return (
-                <div
+                <Link
                   key={appointment.id}
-                  className="flex items-start gap-4 p-4 border rounded-lg hover:bg-accent/50 transition-colors"
+                  href={`/appointments/${appointment.id}`}
+                  className="block bg-white rounded-airbnb-lg border border-gray-200 p-4 hover:shadow-airbnb-lg transition-all active:scale-[0.98]"
                 >
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">
-                          Dr. {appointment.doctor?.firstName}{' '}
-                          {appointment.doctor?.lastName}
-                        </span>
-                      </div>
-                      <Badge
-                        variant={
-                          appointment.status === 'confirmed'
-                            ? 'default'
-                            : 'secondary'
-                        }
-                      >
-                        {appointment.status}
-                      </Badge>
-                    </div>
-
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-3.5 w-3.5" />
-                        {format(appointmentDateTime, 'MMM dd, yyyy')}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-3.5 w-3.5" />
-                        {format(appointmentDateTime, 'hh:mm a')}
-                      </div>
-                      {appointment.consultationType === 'video' && (
-                        <div className="flex items-center gap-1">
-                          <Video className="h-3.5 w-3.5" />
-                          Video Call
-                        </div>
-                      )}
-                    </div>
-
-                    {appointment.reason && (
-                      <p className="text-sm text-muted-foreground">
-                        {appointment.reason}
-                      </p>
-                    )}
-
-                    {isWithin24Hours && (
-                      <div className="flex items-center gap-2 pt-2">
-                        <Badge variant="destructive" className="text-xs">
-                          Starting Soon
-                        </Badge>
-                        {appointment.consultationType === 'video' && (
-                          <Button size="sm" asChild>
-                            <Link href={`/video/${appointment.videoRoomId}`}>
-                              Join Video Call
-                            </Link>
-                          </Button>
-                        )}
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-semibold text-gray-900">
+                      Dr. {appointment.doctor?.firstName} {appointment.doctor?.lastName}
+                    </span>
+                    {appointment.consultationType === 'video' && (
+                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                        <Video className="h-4 w-4 text-blue-600" />
                       </div>
                     )}
                   </div>
-                </div>
+
+                  <div className="flex items-center gap-3 text-sm text-gray-600">
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-4 w-4" />
+                      {format(appointmentDateTime, 'MMM dd')}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Clock className="h-4 w-4" />
+                      {format(appointmentDateTime, 'hh:mm a')}
+                    </div>
+                  </div>
+
+                  {isWithin24Hours && (
+                    <div className="mt-2 px-2 py-1 bg-red-50 text-red-600 text-xs font-medium rounded-full w-fit">
+                      Starting Soon
+                    </div>
+                  )}
+                </Link>
               );
             })}
           </div>
         )}
-      </CardContent>
-    </Card>
+    </div>
   );
 }
