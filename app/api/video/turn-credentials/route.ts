@@ -1,12 +1,16 @@
+
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@workos-inc/authkit-nextjs';
 
 /**
  * Proxy to video calling service - Get TURN credentials
  */
-export const GET = withAuth(async (req: NextRequest) => {
+/**
+ * Proxy to video calling service - Get TURN credentials
+ */
+export async function GET(req: NextRequest) {
     try {
-        const { user } = req;
+        const { user } = await withAuth();
 
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -35,4 +39,4 @@ export const GET = withAuth(async (req: NextRequest) => {
             { status: 500 }
         );
     }
-});
+}

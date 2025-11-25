@@ -1,8 +1,11 @@
-import { withAuth } from "@workos-inc/authkit-nextjs";
 
-export const POST = withAuth(async ({ req }) => {
+import { withAuth } from "@workos-inc/authkit-nextjs";
+import { NextRequest } from "next/server";
+
+export async function POST(req: NextRequest) {
     try {
-        const authID = req.headers.get("X-Auth-ID");
+        const { user } = await withAuth();
+        const authID = user?.id || req.headers.get("X-Auth-ID");
 
         const response = await fetch(
             `${process.env.NEXT_PUBLIC_API_BASE_URL}/kyc/initiate`,
@@ -24,4 +27,4 @@ export const POST = withAuth(async ({ req }) => {
             { status: 500 }
         );
     }
-});
+}

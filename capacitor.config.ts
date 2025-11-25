@@ -1,4 +1,5 @@
 import type { CapacitorConfig } from '@capacitor/cli';
+import { KeyboardResize, KeyboardStyle } from '@capacitor/keyboard';
 
 const config: CapacitorConfig = {
   appId: 'com.treato.treato',
@@ -15,7 +16,7 @@ const config: CapacitorConfig = {
       backgroundColor: '#ffffff',
       showSpinner: false,
       androidSplashResourceName: 'splash',
-      iosSplashResourceName: 'Default',
+
     },
     StatusBar: {
       style: 'DARK',
@@ -23,16 +24,11 @@ const config: CapacitorConfig = {
       overlaysWebView: false,
     },
     Keyboard: {
-      resize: 'body',
-      style: 'dark',
+      resize: KeyboardResize.Body,
+      style: KeyboardStyle.Dark,
       resizeOnFullScreen: true,
     },
-    App: {
-      // Deep linking configuration
-      appUrlOpen: {
-        enabled: true,
-      },
-    },
+
   },
 };
 

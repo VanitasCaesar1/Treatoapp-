@@ -45,5 +45,30 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	
+	<!-- Permission Descriptions - Required for App Store approval -->
+	<key>NSCameraUsageDescription</key>
+	<string>Treato needs camera access to update your profile photo and share medical documents with your doctor.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Treato needs photo library access to select and upload profile photos and medical documents.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Treato uses your location to find nearby doctors and hospitals for convenient healthcare access.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Treato uses Face ID to securely and quickly log you into your account.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Treato needs microphone access for video consultations with your doctor.</string>
+	
+	<!-- Deep Linking Configuration -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>treato</string>
+			</array>
+			<key>CFBundleURLName</key>
+			<string>com.treato.treato</string>
+		</dict>
+	</array>
 </dict>
 </plist>

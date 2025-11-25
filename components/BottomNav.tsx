@@ -3,8 +3,10 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Search, Calendar, User } from 'lucide-react';
+import { Search, Calendar, User, Home, Activity } from 'lucide-react';
 import { useCapacitor } from '@/lib/capacitor';
+import { cn } from '@/lib/utils';
+import { motion } from 'framer-motion';
 
 export default function BottomNav() {
     const pathname = usePathname();
@@ -14,17 +16,26 @@ export default function BottomNav() {
         {
             name: 'Home',
             href: '/dashboard',
-            icon: Search,
+            icon: Home,
+            activeIcon: Home,
+        },
+        {
+            name: 'Records',
+            href: '/medical-records',
+            icon: Activity,
+            activeIcon: Activity,
         },
         {
             name: 'Appointments',
             href: '/appointments',
             icon: Calendar,
+            activeIcon: Calendar,
         },
         {
             name: 'Profile',
             href: '/profile',
             icon: User,
+            activeIcon: User,
         },
     ];
 
@@ -32,46 +43,59 @@ export default function BottomNav() {
         capacitor.lightHaptic();
     };
 
-    // Don't show on non-app pages if needed, but usually good to show
-    // Hide on login/onboarding
     if (pathname === '/login' || pathname === '/') return null;
 
     return (
-        <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-safe border-t border-gray-200 pb-safe z-50 tap-highlight-none shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
-            <div className="flex justify-around items-center">
-                {tabs.map((tab) => {
-                    const isActive = pathname === tab.href || (tab.href === '/dashboard' && pathname.startsWith('/dashboard'));
-                    const Icon = tab.icon;
+        <div className="fixed bottom-0 left-0 right-0 z-50 pointer-events-none">
+            {/* Gradient fade at the bottom to blend content */}
+            <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-white via-white/80 to-transparent pointer-events-none" />
 
-                    return (
-                        <Link
-                            key={tab.name}
-                            href={tab.href}
-                            onClick={handleTabClick}
-                            className={`
-                                flex flex-col items-center justify-center touch-target w-full
-                                space-y-1 py-2 transition-all duration-200
-                                active:scale-95 select-none-touch
-                                ${isActive
-                                    ? 'text-medical-blue'
-                                    : 'text-gray-500 active:text-gray-700'
-                                }
-                            `}
-                        >
-                            <div className={`relative transition-transform duration-200 ${isActive ? 'scale-110' : ''}`}>
-                                <Icon
-                                    className={`w-6 h-6 ${isActive ? 'stroke-[2.5px]' : 'stroke-2'}`}
-                                />
-                                {isActive && (
-                                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-medical-blue rounded-full animate-scale-in" />
+            <div className="relative px-4 pb-safe pt-2 pointer-events-auto">
+                <nav className="mx-auto max-w-md bg-white/90 backdrop-blur-2xl border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.12)] rounded-full mb-4 px-2 py-2 flex justify-between items-center supports-[backdrop-filter]:bg-white/70">
+                    {tabs.map((tab) => {
+                        const isActive = pathname === tab.href || (tab.href === '/dashboard' && pathname === '/dashboard');
+                        const Icon = tab.icon;
+
+                        return (
+                            <Link
+                                key={tab.name}
+                                href={tab.href}
+                                onClick={handleTabClick}
+                                className={cn(
+                                    "relative flex flex-col items-center justify-center w-full h-12 rounded-full transition-all duration-300 touch-target select-none-touch",
+                                    isActive ? "text-blue-600" : "text-gray-400 hover:text-gray-600"
                                 )}
-                            </div>
-                            <span className={`text-[10px] font-medium transition-all duration-200 ${isActive ? 'font-semibold' : ''}`}>
-                                {tab.name}
-                            </span>
-                        </Link>
-                    );
-                })}
+                            >
+                                {isActive && (
+                                    <motion.div
+                                        layoutId="bottom-nav-indicator"
+                                        className="absolute inset-0 bg-blue-50 rounded-full"
+                                        initial={false}
+                                        transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                                    />
+                                )}
+
+                                <div className="relative z-10 flex flex-col items-center gap-0.5">
+                                    <Icon
+                                        className={cn(
+                                            "w-5 h-5 transition-all duration-300",
+                                            isActive ? "stroke-[2.5px] scale-110" : "stroke-2"
+                                        )}
+                                    />
+                                    {isActive && (
+                                        <motion.span
+                                            initial={{ opacity: 0, y: 5 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            className="text-[9px] font-bold"
+                                        >
+                                            {tab.name}
+                                        </motion.span>
+                                    )}
+                                </div>
+                            </Link>
+                        );
+                    })}
+                </nav>
             </div>
         </div>
     );

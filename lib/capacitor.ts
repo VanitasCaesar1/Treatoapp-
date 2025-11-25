@@ -141,7 +141,7 @@ export class CapacitorService {
         longitude: coordinates.coords.longitude,
       };
     } catch (error) {
-      console.error('Error getting location:', error);
+      // Silent fail - user may have denied location permission
       return null;
     }
   }

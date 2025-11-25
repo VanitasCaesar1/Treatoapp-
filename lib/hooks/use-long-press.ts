@@ -17,7 +17,7 @@ export function useLongPress({
   haptic = true,
 }: UseLongPressOptions) {
   const capacitor = useCapacitor();
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const isLongPress = useRef(false);
 
   const start = useCallback(() => {

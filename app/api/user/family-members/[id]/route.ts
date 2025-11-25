@@ -1,10 +1,11 @@
+
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@workos-inc/authkit-nextjs';
 
 // PUT /api/user/family-members/[id] - Update a family member
 export async function PUT(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const { accessToken, user } = await withAuth({ ensureSignedIn: true });
@@ -15,7 +16,7 @@ export async function PUT(
         }
 
         const memberData = await request.json();
-        const id = params.id;
+        const { id } = await params;
 
         // Update family member via backend API
         const response = await fetch(
@@ -54,7 +55,7 @@ export async function PUT(
 // DELETE /api/user/family-members/[id] - Delete a family member
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const { accessToken, user } = await withAuth({ ensureSignedIn: true });
@@ -64,7 +65,7 @@ export async function DELETE(
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const id = params.id;
+        const { id } = await params;
 
         // Delete family member via backend API
         const response = await fetch(

@@ -3,11 +3,11 @@ import { Patient } from './patient';
 
 export type ConsultationType = 'in-person' | 'video' | 'phone';
 
-export type AppointmentStatus = 
-  | 'scheduled' 
-  | 'confirmed' 
-  | 'in-progress' 
-  | 'completed' 
+export type AppointmentStatus =
+  | 'scheduled'
+  | 'confirmed'
+  | 'in-progress'
+  | 'completed'
   | 'cancelled';
 
 export interface Appointment {
@@ -26,6 +26,11 @@ export interface Appointment {
   updatedAt: string;
   doctor?: Doctor;
   patient?: Patient;
+
+  // Denormalized fields for convenience (populated by backend)
+  doctorName?: string;
+  specialty?: string;
+  location?: string;
 }
 
 export interface CreateAppointmentInput {

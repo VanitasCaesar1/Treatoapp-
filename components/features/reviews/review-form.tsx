@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { StarRating } from '@/components/ui/star-rating';
@@ -12,15 +12,28 @@ interface ReviewFormProps {
     doctorId: string;
     doctorName: string;
     appointmentId?: string;
+    existingReview?: {
+        id: string;
+        rating: number;
+        comment: string;
+    };
     onSuccess?: () => void;
 }
 
-export function ReviewForm({ doctorId, doctorName, appointmentId, onSuccess }: ReviewFormProps) {
-    const [rating, setRating] = useState(0);
-    const [comment, setComment] = useState('');
+export function ReviewForm({ doctorId, doctorName, appointmentId, existingReview, onSuccess }: ReviewFormProps) {
+    const [rating, setRating] = useState(existingReview?.rating || 0);
+    const [comment, setComment] = useState(existingReview?.comment || '');
     const [isAnonymous, setIsAnonymous] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [submitted, setSubmitted] = useState(false);
+    const isEditing = !!existingReview;
+
+    useEffect(() => {
+        if (existingReview) {
+            setRating(existingReview.rating);
+            setComment(existingReview.comment || '');
+        }
+    }, [existingReview]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -33,8 +46,13 @@ export function ReviewForm({ doctorId, doctorName, appointmentId, onSuccess }: R
         setSubmitting(true);
 
         try {
-            const response = await fetch(`/api/doctors/${doctorId}/reviews`, {
-                method: 'POST',
+            const method = isEditing ? 'PUT' : 'POST';
+            const url = isEditing
+                ? `/api/doctors/${doctorId}/reviews/${existingReview.id}`
+                : `/api/doctors/${doctorId}/reviews`;
+
+            const response = await fetch(url, {
+                method,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     rating,
@@ -46,23 +64,25 @@ export function ReviewForm({ doctorId, doctorName, appointmentId, onSuccess }: R
 
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to submit review');
+                throw new Error(errorData.error || `Failed to ${isEditing ? 'update' : 'submit'} review`);
             }
 
             setSubmitted(true);
-            toast.success('Review submitted successfully!');
+            toast.success(`Review ${isEditing ? 'updated' : 'submitted'} successfully!`);
 
             // Reset form after slight delay
             setTimeout(() => {
-                setRating(0);
-                setComment('');
-                setIsAnonymous(false);
+                if (!isEditing) {
+                    setRating(0);
+                    setComment('');
+                    setIsAnonymous(false);
+                }
                 setSubmitted(false);
                 if (onSuccess) onSuccess();
             }, 2000);
         } catch (error: any) {
             console.error('Failed to submit review:', error);
-            toast.error(error.message || 'Failed to submit review');
+            toast.error(error.message || `Failed to ${isEditing ? 'update' : 'submit'} review`);
         } finally {
             setSubmitting(false);
         }
@@ -82,7 +102,7 @@ export function ReviewForm({ doctorId, doctorName, appointmentId, onSuccess }: R
                         <CheckCircle2 className="w-8 h-8 text-green-600" />
                     </div>
                     <h3 className="font-bold text-gray-900 mb-2">Thank You!</h3>
-                    <p className="text-gray-600 text-sm">Your review has been submitted successfully.</p>
+                    <p className="text-gray-600 text-sm">Your review has been {isEditing ? 'updated' : 'submitted'} successfully.</p>
                 </motion.div>
             ) : (
                 <motion.form
@@ -91,10 +111,12 @@ export function ReviewForm({ doctorId, doctorName, appointmentId, onSuccess }: R
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     onSubmit={handleSubmit}
-                    className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-5"
+                    className="space-y-5"
                 >
                     <div>
-                        <h3 className="font-bold text-gray-900 mb-1">How was your experience with {doctorName}?</h3>
+                        <h3 className="font-bold text-gray-900 mb-1">
+                            {isEditing ? `Edit your review for ${doctorName}` : `How was your experience with ${doctorName}?`}
+                        </h3>
                         <p className="text-sm text-gray-500">Your feedback helps others make better decisions</p>
                     </div>
 
@@ -126,18 +148,20 @@ export function ReviewForm({ doctorId, doctorName, appointmentId, onSuccess }: R
                         <p className="text-xs text-gray-400 text-right">{comment.length}/500</p>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                        <input
-                            type="checkbox"
-                            id="anonymous"
-                            checked={isAnonymous}
-                            onChange={(e) => setIsAnonymous(e.target.checked)}
-                            className="w-4 h-4 rounded border-gray-300 text-medical-blue focus:ring-medical-blue"
-                        />
-                        <label htmlFor="anonymous" className="text-sm text-gray-600">
-                            Post anonymously
-                        </label>
-                    </div>
+                    {!isEditing && (
+                        <div className="flex items-center gap-2">
+                            <input
+                                type="checkbox"
+                                id="anonymous"
+                                checked={isAnonymous}
+                                onChange={(e) => setIsAnonymous(e.target.checked)}
+                                className="w-4 h-4 rounded border-gray-300 text-medical-blue focus:ring-medical-blue"
+                            />
+                            <label htmlFor="anonymous" className="text-sm text-gray-600">
+                                Post anonymously
+                            </label>
+                        </div>
+                    )}
 
                     <Button
                         type="submit"
@@ -147,10 +171,10 @@ export function ReviewForm({ doctorId, doctorName, appointmentId, onSuccess }: R
                         {submitting ? (
                             <>
                                 <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                                Submitting...
+                                {isEditing ? 'Updating...' : 'Submitting...'}
                             </>
                         ) : (
-                            'Submit Review'
+                            isEditing ? 'Update Review' : 'Submit Review'
                         )}
                     </Button>
                 </motion.form>

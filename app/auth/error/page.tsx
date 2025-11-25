@@ -5,9 +5,9 @@ import { Button } from '@/components/ui/button';
 import { AlertTriangle, Heart, RefreshCw, Home, Shield } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 
-export default function AuthErrorPage() {
+function AuthErrorContent() {
   const searchParams = useSearchParams();
   const message = searchParams.get('message') || 'An authentication error occurred';
   const [isRetrying, setIsRetrying] = useState(false);
@@ -97,7 +97,7 @@ export default function AuthErrorPage() {
 
               {/* Action buttons */}
               <div className="space-y-3">
-                <Button 
+                <Button
                   onClick={handleRetry}
                   disabled={isRetrying}
                   className="w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 active:scale-[0.98]"
@@ -114,7 +114,7 @@ export default function AuthErrorPage() {
                     </div>
                   )}
                 </Button>
-                
+
                 <Button asChild variant="outline" className="w-full h-12 rounded-xl">
                   <Link href="/" className="flex items-center gap-2">
                     <Home className="h-4 w-4" />
@@ -138,5 +138,22 @@ export default function AuthErrorPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function AuthErrorPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-yellow-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="h-20 w-20 rounded-full bg-gradient-to-r from-red-500 to-orange-500 flex items-center justify-center shadow-lg mx-auto mb-4">
+            <Heart className="h-10 w-10 text-white animate-pulse" />
+          </div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <AuthErrorContent />
+    </Suspense>
   );
 }

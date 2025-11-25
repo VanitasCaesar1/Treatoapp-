@@ -1,12 +1,16 @@
+
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@workos-inc/authkit-nextjs';
 
 /**
  * Get room details
  */
-export const GET = withAuth(async (req: NextRequest, { params }: { params: Promise<{ roomId: string }> }) => {
+/**
+ * Get room details
+ */
+export async function GET(req: NextRequest, { params }: { params: Promise<{ roomId: string }> }) {
     try {
-        const { user } = req;
+        const { user } = await withAuth();
         const { roomId } = await params;
 
         if (!user) {
@@ -39,14 +43,14 @@ export const GET = withAuth(async (req: NextRequest, { params }: { params: Promi
             { status: 500 }
         );
     }
-});
+}
 
 /**
  * Join room (create participant)
  */
-export const POST = withAuth(async (req: NextRequest, { params }: { params: Promise<{ roomId: string }> }) => {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ roomId: string }> }) {
     try {
-        const { user } = req;
+        const { user } = await withAuth();
         const { roomId } = await params;
 
         if (!user) {
@@ -84,4 +88,4 @@ export const POST = withAuth(async (req: NextRequest, { params }: { params: Prom
             { status: 500 }
         );
     }
-});
+}

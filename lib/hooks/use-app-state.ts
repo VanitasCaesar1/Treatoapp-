@@ -10,18 +10,25 @@ export function useAppState(onResume?: () => void, onPause?: () => void) {
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
 
-    const stateListener = App.addListener('appStateChange', (state) => {
+    let listenerHandle: any = null;
+
+    // addListener returns a Promise, so we need to await it
+    App.addListener('appStateChange', (state) => {
       setAppState(state);
-      
+
       if (state.isActive && onResume) {
         onResume();
       } else if (!state.isActive && onPause) {
         onPause();
       }
+    }).then((handle) => {
+      listenerHandle = handle;
     });
 
     return () => {
-      stateListener.remove();
+      if (listenerHandle) {
+        listenerHandle.remove();
+      }
     };
   }, [onResume, onPause]);
 

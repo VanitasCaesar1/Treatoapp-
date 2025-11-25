@@ -57,8 +57,10 @@ export function useNetworkStatus() {
         // Initial check
         checkStatus();
 
-        // Listen for network changes
-        const handler = Network.addListener('networkStatusChange', (newStatus) => {
+        let listenerHandle: any = null;
+
+        // Listen for network changes - addListener returns a Promise
+        Network.addListener('networkStatusChange', (newStatus) => {
             setStatus({
                 connected: newStatus.connected,
                 connectionType: newStatus.connectionType,
@@ -68,10 +70,14 @@ export function useNetworkStatus() {
 
             // Log network transitions
             console.log('Network changed:', newStatus.connectionType);
+        }).then((handle) => {
+            listenerHandle = handle;
         });
 
         return () => {
-            handler.remove();
+            if (listenerHandle) {
+                listenerHandle.remove();
+            }
         };
     }, [checkStatus]);
 

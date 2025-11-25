@@ -24,5 +24,4 @@ export { useToggle } from './use-toggle';
 // Existing hooks
 export { usePullToRefresh } from './use-pull-to-refresh';
 export { useAppointments } from './use-appointments';
-export { useSocial } from './use-social';
 export { useWebSocket } from './use-websocket';

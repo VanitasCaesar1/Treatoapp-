@@ -6,11 +6,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Shield, Upload, CheckCircle, AlertCircle, FileText, CreditCard } from "lucide-react";
 import { KYCStatusBadge } from "@/components/kyc/KYCStatusBadge";
-import { toast } from "sonner";
+import toast from "react-hot-toast";
 
 export default function KYCVerifyPage() {
     const router = useRouter();
@@ -156,22 +155,22 @@ export default function KYCVerifyPage() {
 
             {/* Benefits Banner */}
             {!isVerified && (
-                <Alert className="bg-blue-50 border-blue-200">
-                    <Shield className="h-4 w-4 text-blue-600" />
-                    <AlertDescription className="text-blue-900">
+                <div className="bg-blue-50 border-blue-200 border rounded-lg p-4 flex items-start gap-3">
+                    <Shield className="h-4 w-4 text-blue-600 mt-0.5" />
+                    <p className="text-blue-900 text-sm">
                         Complete KYC to enable cashless insurance claims and faster appointment bookings
-                    </AlertDescription>
-                </Alert>
+                    </p>
+                </div>
             )}
 
             {/* Insurance Ready Banner */}
             {isVerified && (
-                <Alert className="bg-green-50 border-green-200">
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                    <AlertDescription className="text-green-900 font-medium">
+                <div className="bg-green-50 border-green-200 border rounded-lg p-4 flex items-start gap-3">
+                    <CheckCircle className="h-4 w-4 text-green-600 mt-0.5" />
+                    <p className="text-green-900 font-medium text-sm">
                         🎉 You're verified and ready for insurance claims!
-                    </AlertDescription>
-                </Alert>
+                    </p>
+                </div>
             )}
 
             {/* Verification Tabs */}
@@ -200,12 +199,12 @@ export default function KYCVerifyPage() {
                         </CardHeader>
                         <CardContent className="space-y-4">
                             {aadhaarVerified ? (
-                                <Alert className="bg-green-50 border-green-200">
-                                    <CheckCircle className="h-4 w-4 text-green-600" />
-                                    <AlertDescription className="text-green-900">
+                                <div className="bg-green-50 border-green-200 border rounded-lg p-4 flex items-start gap-3">
+                                    <CheckCircle className="h-4 w-4 text-green-600 mt-0.5" />
+                                    <p className="text-green-900 text-sm">
                                         Aadhaar verified successfully!
-                                    </AlertDescription>
-                                </Alert>
+                                    </p>
+                                </div>
                             ) : (
                                 <>
                                     <div className="bg-blue-50 p-4 rounded-lg space-y-2">
@@ -277,12 +276,12 @@ export default function KYCVerifyPage() {
                         </CardHeader>
                         <CardContent className="space-y-4">
                             {panVerified ? (
-                                <Alert className="bg-green-50 border-green-200">
-                                    <CheckCircle className="h-4 w-4 text-green-600" />
-                                    <AlertDescription className="text-green-900">
+                                <div className="bg-green-50 border-green-200 border rounded-lg p-4 flex items-start gap-3">
+                                    <CheckCircle className="h-4 w-4 text-green-600 mt-0.5" />
+                                    <p className="text-green-900 text-sm">
                                         PAN verified successfully!
-                                    </AlertDescription>
-                                </Alert>
+                                    </p>
+                                </div>
                             ) : (
                                 <div className="space-y-4">
                                     <div>
@@ -321,12 +320,12 @@ export default function KYCVerifyPage() {
                                         />
                                     </div>
 
-                                    <Alert>
-                                        <AlertCircle className="h-4 w-4" />
-                                        <AlertDescription className="text-sm">
+                                    <div className="bg-gray-50 border rounded-lg p-4 flex items-start gap-3">
+                                        <AlertCircle className="h-4 w-4 text-gray-600 mt-0.5" />
+                                        <p className="text-sm">
                                             Your PAN will be verified manually by our team within 24-48 hours
-                                        </AlertDescription>
-                                    </Alert>
+                                        </p>
+                                    </div>
 
                                     <Button
                                         onClick={handlePANUpload}

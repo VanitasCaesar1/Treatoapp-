@@ -36,11 +36,17 @@ export function useVideoAppState(options: VideoAppStateOptions) {
     }, [onActive, onBackground]);
 
     useEffect(() => {
-        // Add state change listener
-        const listener = App.addListener('appStateChange', handleStateChange);
+        let listenerHandle: any = null;
+
+        // Add state change listener - addListener returns a Promise
+        App.addListener('appStateChange', handleStateChange).then((handle) => {
+            listenerHandle = handle;
+        });
 
         return () => {
-            listener.remove();
+            if (listenerHandle) {
+                listenerHandle.remove();
+            }
         };
     }, [handleStateChange]);
 

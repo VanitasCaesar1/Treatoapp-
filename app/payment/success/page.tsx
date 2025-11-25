@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { CheckCircle, Calendar, Clock, User, Receipt } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 
-export default function PaymentSuccessPage() {
+function PaymentSuccessContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const txnId = searchParams.get('txnId');
@@ -107,7 +107,7 @@ export default function PaymentSuccessPage() {
                             View My Appointments
                         </Button>
                     </Link>
-                    <Link href="/home" className="block">
+                    <Link href="/dashboard" className="block">
                         <Button variant="outline" className="w-full h-12 rounded-xl border-2">
                             Back to Home
                         </Button>
@@ -120,5 +120,17 @@ export default function PaymentSuccessPage() {
                 </p>
             </div>
         </div>
+    );
+}
+
+export default function PaymentSuccessPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-gradient-to-b from-green-50 to-white flex items-center justify-center">
+                <div className="animate-pulse text-green-600">Loading...</div>
+            </div>
+        }>
+            <PaymentSuccessContent />
+        </Suspense>
     );
 }

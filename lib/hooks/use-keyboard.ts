@@ -11,19 +11,27 @@ export function useKeyboard() {
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
 
-    const showListener = Keyboard.addListener('keyboardWillShow', (info) => {
+    let showHandle: any = null;
+    let hideHandle: any = null;
+
+    // addListener returns a Promise, so we need to await it
+    Keyboard.addListener('keyboardWillShow', (info) => {
       setIsKeyboardVisible(true);
       setKeyboardHeight(info.keyboardHeight);
+    }).then((handle) => {
+      showHandle = handle;
     });
 
-    const hideListener = Keyboard.addListener('keyboardWillHide', () => {
+    Keyboard.addListener('keyboardWillHide', () => {
       setIsKeyboardVisible(false);
       setKeyboardHeight(0);
+    }).then((handle) => {
+      hideHandle = handle;
     });
 
     return () => {
-      showListener.remove();
-      hideListener.remove();
+      if (showHandle) showHandle.remove();
+      if (hideHandle) hideHandle.remove();
     };
   }, []);
 

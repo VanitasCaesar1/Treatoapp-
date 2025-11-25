@@ -13,7 +13,10 @@ export function useBackButton(onBack?: () => boolean | void) {
       return;
     }
 
-    const listener = App.addListener('backButton', ({ canGoBack }) => {
+    let listenerHandle: any = null;
+
+    // addListener returns a Promise, so we need to await it
+    App.addListener('backButton', ({ canGoBack }) => {
       // If custom handler provided, use it
       if (onBack) {
         const shouldPreventDefault = onBack();
@@ -26,10 +29,14 @@ export function useBackButton(onBack?: () => boolean | void) {
       } else {
         App.minimizeApp();
       }
+    }).then((handle) => {
+      listenerHandle = handle;
     });
 
     return () => {
-      listener.remove();
+      if (listenerHandle) {
+        listenerHandle.remove();
+      }
     };
   }, [onBack, router]);
 }

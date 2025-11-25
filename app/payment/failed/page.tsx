@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { XCircle, RefreshCw, MessageCircle, AlertCircle } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import Link from 'next/link';
 
-export default function PaymentFailedPage() {
+function PaymentFailedContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const txnId = searchParams.get('txnId');
@@ -118,7 +118,7 @@ export default function PaymentFailedPage() {
                         Retry Payment
                     </Button>
 
-                    <Link href="/home" className="block">
+                    <Link href="/dashboard" className="block">
                         <Button variant="outline" className="w-full h-12 rounded-xl border-2">
                             Back to Home
                         </Button>
@@ -135,5 +135,17 @@ export default function PaymentFailedPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function PaymentFailedPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-gradient-to-b from-red-50 to-white flex items-center justify-center">
+                <div className="animate-pulse text-red-600">Loading...</div>
+            </div>
+        }>
+            <PaymentFailedContent />
+        </Suspense>
     );
 }

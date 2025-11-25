@@ -6,6 +6,7 @@ interface IncomingCall {
     roomId: string;
     doctorId: string;
     doctorName: string;
+    doctorImage?: string;
     patientId: string;
 }
 
@@ -66,6 +67,7 @@ export function CallNotificationProvider({ children }: { children: React.ReactNo
                             roomId: notification.roomId,
                             doctorId: notification.doctorId,
                             doctorName: notification.doctorName,
+                            doctorImage: notification.doctorImage,
                             patientId: notification.patientId,
                         });
 

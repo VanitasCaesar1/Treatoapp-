@@ -4,7 +4,7 @@ import {
 } from '@tanstack/react-query';
 import {
   searchDoctors,
-  getDoctor,
+  getDoctorById,
   getDoctorSchedules,
   getDoctorFees,
 } from '@/lib/api/doctors';
@@ -42,7 +42,7 @@ export function useDoctor(
 ) {
   return useQuery({
     queryKey: ['doctor', id],
-    queryFn: () => getDoctor(id),
+    queryFn: () => getDoctorById(id),
     enabled: !!id,
     ...options,
   });

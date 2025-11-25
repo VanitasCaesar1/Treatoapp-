@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@workos-inc/authkit-react';
 import { Patient, UpdatePatientInput } from '@/lib/types/patient';
-import { getMyPatientProfile, createPatientProfile, updatePatientProfile } from '@/lib/api/patients';
+import { getPatientProfile, updatePatientProfile } from '@/lib/api/patients';
 
 const CACHE_KEY_PREFIX = 'patient_profile_';
 const CACHE_VERSION = '1.0';
@@ -115,20 +115,14 @@ export function usePatientProfile() {
                 }
             }
 
-            const profileData = await getMyPatientProfile();
+            const profileData = await getPatientProfile(user.id);
 
             if (profileData) {
                 setProfile(profileData);
                 saveToCache(profileData);
             } else {
-                // Profile doesn't exist, create one
-                const newProfile = await createPatientProfile({
-                    firstName: user.firstName || '',
-                    lastName: user.lastName || '',
-                    email: user.email || '',
-                });
-                setProfile(newProfile);
-                saveToCache(newProfile);
+                // Profile doesn't exist - set error
+                setError('Profile not found. Please contact support.');
             }
         } catch (err: any) {
             console.error('Failed to fetch profile:', err);
@@ -150,7 +144,7 @@ export function usePatientProfile() {
         saveToCache(updatedProfile);
 
         try {
-            const result = await updatePatientProfile(updates);
+            const result = await updatePatientProfile(profile.id, updates);
             setProfile(result);
             saveToCache(result);
             return true;

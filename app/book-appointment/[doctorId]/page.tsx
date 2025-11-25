@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { Capacitor } from '@capacitor/core';
 
-export default function BookAppointmentPage() {
+function BookAppointmentContent() {
     const params = useParams();
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -632,5 +632,20 @@ export default function BookAppointmentPage() {
                 }
             `}</style>
         </div >
+    );
+}
+
+export default function BookAppointmentPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-gray-50/50 flex items-center justify-center">
+                <div className="flex flex-col items-center gap-3">
+                    <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                    <p className="text-gray-500 font-medium">Loading booking page...</p>
+                </div>
+            </div>
+        }>
+            <BookAppointmentContent />
+        </Suspense>
     );
 }

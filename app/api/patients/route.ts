@@ -1,3 +1,4 @@
+
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@workos-inc/authkit-nextjs';
 
@@ -6,9 +7,9 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8
 /**
  * GET /api/patients - Get current user's patient profile
  */
-export const GET = withAuth(async (req: NextRequest) => {
+export async function GET(req: NextRequest) {
     try {
-        const { user } = req;
+        const { user } = await withAuth();
 
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -41,14 +42,14 @@ export const GET = withAuth(async (req: NextRequest) => {
             { status: 500 }
         );
     }
-});
+}
 
 /**
  * POST /api/patients - Create patient profile
  */
-export const POST = withAuth(async (req: NextRequest) => {
+export async function POST(req: NextRequest) {
     try {
-        const { user } = req;
+        const { user } = await withAuth();
 
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -92,14 +93,14 @@ export const POST = withAuth(async (req: NextRequest) => {
             { status: 500 }
         );
     }
-});
+}
 
 /**
  * PUT /api/patients - Update patient profile
  */
-export const PUT = withAuth(async (req: NextRequest) => {
+export async function PUT(req: NextRequest) {
     try {
-        const { user } = req;
+        const { user } = await withAuth();
 
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -131,4 +132,4 @@ export const PUT = withAuth(async (req: NextRequest) => {
             { status: 500 }
         );
     }
-});
+}

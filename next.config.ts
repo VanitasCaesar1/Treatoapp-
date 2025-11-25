@@ -6,6 +6,7 @@ const nextConfig = {
     removeConsole: process.env.NODE_ENV === 'production',
   },
   poweredByHeader: false,
+
   // Configuration for mobile app deployment
   images: {
     domains: [], // Add any external image domains here
