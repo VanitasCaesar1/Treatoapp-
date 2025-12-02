@@ -34,6 +34,11 @@ import { FamilyMemberList } from '@/components/family-member-list';
 import { FamilyMemberForm } from '@/components/family-member-form';
 import { FamilyMember } from '@/lib/types/family-member';
 import { EditableProfileForm } from '@/components/profile/editable-profile-form';
+import { useUserRoles } from '@/lib/hooks/use-user-roles';
+import { useAccountMode } from '@/lib/contexts/account-mode-context';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { AccountSwitcher } from '@/components/navigation/account-switcher';
+import { Stethoscope } from 'lucide-react';
 
 export default function ProfilePage() {
   const [isLoading, setIsLoading] = useState(true);
@@ -47,7 +52,12 @@ export default function ProfilePage() {
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
   const [showFamilyForm, setShowFamilyForm] = useState(false);
   const [editingMember, setEditingMember] = useState<FamilyMember | undefined>();
+  const [tapCount, setTapCount] = useState(0);
+  const [tapTimer, setTapTimer] = useState<NodeJS.Timeout | null>(null);
+  const [showAccountSwitcher, setShowAccountSwitcher] = useState(false);
   const capacitor = useCapacitor();
+  const { isDoctor, roles } = useUserRoles();
+  const { mode, setMode } = useAccountMode();
 
   const fetchProfile = useCallback(async () => {
     try {
@@ -238,11 +248,99 @@ export default function ProfilePage() {
         // Refetch profile to get updated family members
         await fetchProfile();
       } else {
-        throw new Error('Failed to delete family member');
+        throw new Error('Failed to remove family member');
       }
     } catch (error) {
       console.error('Failed to delete:', error);
       showToast.error('Failed to delete family member', 'family-delete-error');
+    }
+  };
+
+  const handleEditFamilyMember = (member: FamilyMember) => {
+    setEditingMember(member);
+    setShowFamilyForm(true);
+  };
+
+  // Role switching logic
+  type AccountMode = 'patient' | 'doctor' | 'admin';
+  const availableRoles = roles.filter((r: string) => r !== 'patient'); // Exclude patient as it's default
+  const hasMultipleRoles = availableRoles.length >= 1; // Has doctor/admin etc.
+
+  // Double-tap: Cycle through roles
+  const handleAvatarDoubleTap = () => {
+    if (!hasMultipleRoles) return;
+
+    // Cycle through: patient → doctor → admin → ... → patient
+    const modeOrder: AccountMode[] = ['patient', 'doctor', 'admin'];
+    const currentIndex = modeOrder.indexOf(mode as AccountMode);
+    const nextIndex = (currentIndex + 1) % modeOrder.length;
+    const nextMode = modeOrder[nextIndex];
+
+    // Check if user has this role
+    if (nextMode === 'patient' || roles.includes(nextMode)) {
+      setMode(nextMode);
+      showToast.success(`Switched to ${nextMode} mode`, 'mode-switch');
+
+      // Navigate to appropriate dashboard
+      if (nextMode === 'doctor') {
+        window.location.href = '/doctor/dashboard';
+      } else if (nextMode === 'admin') {
+        window.location.href = '/admin/dashboard';
+      } else {
+        window.location.href = '/dashboard/dashboard';
+      }
+    } else {
+      // Skip to next
+      handleAvatarDoubleTap();
+    }
+  };
+
+  // Long press: Show modal
+  const handleAvatarLongPress = () => {
+    if (hasMultipleRoles) {
+      setShowAccountSwitcher(true);
+    }
+  };
+
+  // Touch handlers for double-tap and long-press
+  const handleAvatarTouchStart = () => {
+    if (!hasMultipleRoles) return;
+
+    // Start long press timer
+    const longPressTimer = setTimeout(() => {
+      handleAvatarLongPress();
+    }, 500); // 500ms for long press
+
+    setTapTimer(longPressTimer);
+  };
+
+  const handleAvatarTouchEnd = () => {
+    if (!hasMultipleRoles) return;
+
+    // Clear long press timer
+    if (tapTimer) {
+      clearTimeout(tapTimer);
+      setTapTimer(null);
+    }
+
+    // Detect double tap
+    setTapCount(prev => prev + 1);
+
+    if (tapCount + 1 === 2) {
+      // Double tap detected!
+      handleAvatarDoubleTap();
+      setTapCount(0);
+    } else {
+      // Reset after 300ms
+      const resetTimer = setTimeout(() => setTapCount(0), 300);
+      setTimeout(() => clearTimeout(resetTimer), 301);
+    }
+  };
+
+  const handleAvatarClick = () => {
+    // For desktop: just show modal if has multiple roles
+    if (hasMultipleRoles) {
+      setShowAccountSwitcher(true);
     }
   };
 
@@ -304,15 +402,49 @@ export default function ProfilePage() {
 
             {/* Avatar & Name */}
             <div className="relative mb-3">
-              <Avatar className="h-24 w-24 ring-4 ring-white shadow-xl">
-                <AvatarImage src={profile?.user?.profile_pic || ''} />
-                <AvatarFallback className="text-3xl bg-gradient-to-br from-blue-100 to-blue-50 text-medical-blue font-bold">
-                  {getInitials(profile?.user?.name)}
-                </AvatarFallback>
-              </Avatar>
-              <div className="absolute bottom-0 right-0 bg-white rounded-full p-1 shadow-md">
-                <div className="bg-green-500 w-3 h-3 rounded-full border-2 border-white"></div>
+              <div
+                onTouchStart={handleAvatarTouchStart}
+                onTouchEnd={handleAvatarTouchEnd}
+                onClick={handleAvatarClick}
+                className={cn(
+                  "relative inline-block select-none",
+                  hasMultipleRoles && "cursor-pointer active:scale-95 transition-transform"
+                )}
+              >
+                <Avatar className="h-24 w-24 ring-4 ring-white shadow-xl">
+                  <AvatarImage src={profile?.user?.profile_pic || ''} />
+                  <AvatarFallback className="text-3xl bg-gradient-to-br from-blue-100 to-blue-50 text-medical-blue font-bold">
+                    {getInitials(profile?.user?.name)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="absolute bottom-0 right-0 bg-white rounded-full p-1 shadow-md">
+                  <div className="bg-green-500 w-3 h-3 rounded-full border-2 border-white"></div>
+                </div>
+                {/* Doctor/Admin indicator badge */}
+                {hasMultipleRoles && (
+                  <div className="absolute -bottom-2 left-1/2 -translate-x-1/2">
+                    <div className={cn(
+                      "rounded-full px-3 py-1 flex items-center gap-1 shadow-lg animate-pulse",
+                      mode === 'doctor' && "bg-green-600",
+                      mode === 'admin' && "bg-purple-600",
+                      mode === 'patient' && isDoctor && "bg-gray-600"
+                    )}>
+                      {mode === 'doctor' && <Stethoscope className="h-3 w-3 text-white" />}
+                      {mode === 'admin' && <ShieldCheck className="h-3 w-3 text-white" />}
+                      <span className="text-[10px] text-white font-semibold uppercase tracking-wide">
+                        {mode}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
+
+              {/* Hint text for role switching */}
+              {hasMultipleRoles && (
+                <p className="text-[10px] text-gray-400 text-center mt-3">
+                  Double tap to switch • Long press for menu
+                </p>
+              )}
             </div>
 
             <h1 className="text-xl font-bold text-gray-900 text-center">
@@ -320,8 +452,13 @@ export default function ProfilePage() {
             </h1>
             <p className="text-gray-500 text-sm font-medium mb-2">@{profile?.user?.username || ''}</p>
 
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-600 border border-blue-100">
-              Patient Account
+            <span className={cn(
+              "inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border",
+              mode === 'doctor'
+                ? 'bg-green-50 text-green-600 border-green-100'
+                : 'bg-blue-50 text-blue-600 border-blue-100'
+            )}>
+              {mode === 'doctor' ? 'Doctor' : 'Patient'} Account
             </span>
           </div>
 
@@ -425,10 +562,7 @@ export default function ProfilePage() {
 
             <FamilyMemberList
               members={familyMembers}
-              onEdit={(member) => {
-                setEditingMember(member);
-                setShowFamilyForm(true);
-              }}
+              onEdit={handleEditFamilyMember}
               onDelete={handleDeleteFamilyMember}
               onAdd={() => {
                 setEditingMember(undefined);
@@ -498,6 +632,11 @@ export default function ProfilePage() {
         onSave={handleSaveFamilyMember}
         member={editingMember}
       />
+
+      {/* Account Switcher Modal - Only shows for users with multiple roles */}
+      {hasMultipleRoles && (
+        <AccountSwitcher open={showAccountSwitcher} onClose={() => setShowAccountSwitcher(false)} />
+      )}
     </div>
   );
 }

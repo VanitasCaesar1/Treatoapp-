@@ -5,6 +5,8 @@ import { QueryProvider } from '@/components/providers/query-provider';
 import { CapacitorProvider } from '@/components/providers/capacitor-provider';
 import { AuthKitProvider } from '@workos-inc/authkit-nextjs/components';
 import { UserSessionProvider } from '@/lib/contexts/user-session-context';
+import { LocationProvider } from '@/lib/contexts/location-context';
+import { AccountModeProvider } from '@/lib/contexts/account-mode-context';
 import { NetworkStatus } from '@/components/mobile/network-status';
 
 
@@ -36,51 +38,55 @@ export default function RootLayout({
       <body className="antialiased min-h-screen overflow-x-hidden safe-area">
         <AuthKitProvider>
           <UserSessionProvider>
-            <CapacitorProvider>
-              <QueryProvider>
-                <NetworkStatus />
-                {children}
-                <Toaster
-                  position="top-center"
-                  toastOptions={{
-                    className: '!bg-white !text-gray-900 !shadow-airbnb-card !rounded-airbnb-lg !border !border-gray-100 !font-medium',
-                    duration: 4000,
-                    style: {
-                      padding: '12px 16px',
-                    },
-                    success: {
-                      duration: 3000,
-                      iconTheme: {
-                        primary: '#16a34a',
-                        secondary: '#f0fdf4',
-                      },
-                      style: {
-                        borderLeft: '4px solid #16a34a',
-                      },
-                    },
-                    error: {
-                      duration: 5000,
-                      iconTheme: {
-                        primary: '#dc2626',
-                        secondary: '#fef2f2',
-                      },
-                      style: {
-                        borderLeft: '4px solid #dc2626',
-                      },
-                    },
-                    loading: {
-                      style: {
-                        borderLeft: '4px solid #3b82f6',
-                      },
-                    },
-                  }}
-                  containerStyle={{
-                    top: 24,
-                  }}
-                  reverseOrder={false}
-                />
-              </QueryProvider>
-            </CapacitorProvider>
+            <LocationProvider>
+              <AccountModeProvider>
+                <CapacitorProvider>
+                  <QueryProvider>
+                    <NetworkStatus />
+                    {children}
+                    <Toaster
+                      position="top-center"
+                      toastOptions={{
+                        className: '!bg-white !text-gray-900 !shadow-airbnb-card !rounded-airbnb-lg !border !border-gray-100 !font-medium',
+                        duration: 4000,
+                        style: {
+                          padding: '12px 16px',
+                        },
+                        success: {
+                          duration: 3000,
+                          iconTheme: {
+                            primary: '#16a34a',
+                            secondary: '#f0fdf4',
+                          },
+                          style: {
+                            borderLeft: '4px solid #16a34a',
+                          },
+                        },
+                        error: {
+                          duration: 5000,
+                          iconTheme: {
+                            primary: '#dc2626',
+                            secondary: '#fef2f2',
+                          },
+                          style: {
+                            borderLeft: '4px solid #dc2626',
+                          },
+                        },
+                        loading: {
+                          style: {
+                            borderLeft: '4px solid #3b82f6',
+                          },
+                        },
+                      }}
+                      containerStyle={{
+                        top: 24,
+                      }}
+                      reverseOrder={false}
+                    />
+                  </QueryProvider>
+                </CapacitorProvider>
+              </AccountModeProvider>
+            </LocationProvider>
           </UserSessionProvider>
         </AuthKitProvider>
       </body>

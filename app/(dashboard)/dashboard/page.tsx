@@ -1,24 +1,37 @@
-
-'use client';
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { Search, MapPin, Bell, Calendar, ChevronRight, Loader2, Pill, FlaskConical, Stethoscope, Video, Activity, Zap } from 'lucide-react';
+import { Search, MapPin, Bell, Calendar, ChevronRight, Loader2, Pill, FlaskConical, Stethoscope, Video, Activity, Zap, Clock } from 'lucide-react';
 import CategoryBar from '@/components/CategoryBar';
 import { DoctorCard } from '@/components/features/doctors/doctor-card';
 import { SkeletonCard } from '@/components/ui/skeleton';
 import { api } from '@/lib/api';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useUserSession } from '@/lib/contexts/user-session-context';
+import { useLocation } from '@/lib/contexts/location-context';
 import { cn } from '@/lib/utils';
 import { usePullToRefresh } from '@/lib/hooks/use-pull-to-refresh';
+import { SearchResultsDropdown } from '@/components/search/search-results-dropdown';
+import { LocationPicker } from '@/components/location/location-picker';
+import { getSearchHistory, addToSearchHistory, SearchHistoryItem } from '@/lib/utils/search-history';
 
 export default function DashboardPage() {
   const { user } = useUserSession();
+  const { location } = useLocation();
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [doctors, setDoctors] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState({ doctors: [], hospitals: [] });
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchHistory, setSearchHistory] = useState<SearchHistoryItem[]>([]);
+
+  // Location picker state
+  const [showLocationPicker, setShowLocationPicker] = useState(false);
 
   // Mock upcoming appointment (would come from API in real app)
   const upcomingAppointment = null;
@@ -101,9 +114,65 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchDoctors();
-  }, [selectedCategory]);
+  }, [selectedCategory, location]); // Add location to dependency array
 
   const { containerRef, isRefreshing } = usePullToRefresh({ onRefresh: fetchDoctors });
+
+  // Load search history on mount
+  useEffect(() => {
+    getSearchHistory().then(setSearchHistory);
+  }, []);
+
+  // Debounced search function
+  const performSearch = useCallback(async (query: string) => {
+    if (!query || query.length < 2) {
+      setSearchResults({ doctors: [], hospitals: [] });
+      setShowSearchResults(false);
+      return;
+    }
+
+    setSearchLoading(true);
+    try {
+      // Build search params with location if available
+      const searchParams: any = { q: query, limit: 5 };
+      if (location) {
+        searchParams.lat = location.latitude;
+        searchParams.lng = location.longitude;
+        searchParams.radius = 20; // 20km radius
+      }
+
+      // Search both doctors and hospitals in parallel
+      const [doctorsData, hospitalsData] = await Promise.all([
+        api.get('/doctors/search', searchParams).catch(() => ({ doctors: [] })),
+        api.get('/hospitals/search', searchParams).catch(() => ({ hospitals: [] }))
+      ]);
+
+      setSearchResults({
+        doctors: doctorsData.doctors || [],
+        hospitals: hospitalsData.hospitals || []
+      });
+      setShowSearchResults(true);
+
+      // Add to search history
+      await addToSearchHistory(query);
+      const updatedHistory = await getSearchHistory();
+      setSearchHistory(updatedHistory);
+    } catch (error) {
+      console.error('Search error:', error);
+      setSearchResults({ doctors: [], hospitals: [] });
+    } finally {
+      setSearchLoading(false);
+    }
+  }, [location]);
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      performSearch(searchQuery);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, performSearch]);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -113,10 +182,10 @@ export default function DashboardPage() {
   };
 
   const quickActions = [
-    { icon: FlaskConical, label: 'Lab Tests', color: 'text-purple-600', bg: 'bg-purple-50' },
-    { icon: Pill, label: 'Medicines', color: 'text-emerald-600', bg: 'bg-emerald-50' },
-    { icon: Video, label: 'Teleconsult', color: 'text-blue-600', bg: 'bg-blue-50' },
-    { icon: Activity, label: 'Health', color: 'text-orange-600', bg: 'bg-orange-50' },
+    { icon: FlaskConical, label: 'Lab Tests', color: 'text-purple-600', bg: 'bg-purple-50', href: '/lab-tests' },
+    { icon: Pill, label: 'Medicines', color: 'text-emerald-600', bg: 'bg-emerald-50', href: '/medicines' },
+    { icon: Video, label: 'Teleconsult', color: 'text-blue-600', bg: 'bg-blue-50', href: '/search?type=online' },
+    { icon: Activity, label: 'Health', color: 'text-orange-600', bg: 'bg-orange-50', href: '/medical-records' },
   ];
 
   const healthTips = [
@@ -159,32 +228,86 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Search Trigger */}
-          <Link href="/search">
-            <div className="relative mb-6 group">
-              <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-                <Search className="h-5 w-5 text-gray-400 group-hover:text-medical-blue transition-colors" />
-              </div>
-              <div className="w-full h-14 rounded-2xl bg-gray-50/80 flex items-center px-12 text-gray-500 text-sm font-medium border border-gray-100 group-hover:bg-white group-hover:border-medical-blue/30 group-hover:shadow-md transition-all cursor-text">
-                Search doctors, specialties, clinics...
-              </div>
-              <div className="absolute inset-y-0 right-2 flex items-center pointer-events-none">
-                <div className="bg-white p-2 rounded-xl shadow-sm border border-gray-100">
-                  <MapPin className="h-4 w-4 text-medical-blue" />
+          {/* Functional Search Input */}
+          <div className="relative mb-6">
+            <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+              <Search className="h-5 w-5 text-gray-400" />
+            </div>
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => searchQuery.length >= 2 && setShowSearchResults(true)}
+              onBlur={() => setTimeout(() => setShowSearchResults(false), 200)}
+              placeholder="Search doctors, hospitals, specialties..."
+              className="w-full h-14 rounded-2xl bg-gray-50/80 pl-12 pr-12 text-base border-gray-100 focus:bg-white focus:border-medical-blue/30 focus:shadow-md transition-all"
+            />
+            <div className="absolute inset-y-0 right-4 flex items-center">
+              {searchLoading ? (
+                <Loader2 className="h-4 w-4 text-gray-400 animate-spin" />
+              ) : (
+                <button
+                  onClick={() => setShowLocationPicker(true)}
+                  className="bg-white p-2 rounded-xl shadow-sm border border-gray-100 hover:border-medical-blue transition-colors group"
+                  title={location ? `${location.city || 'Location set'}` : 'Set location'}
+                >
+                  <MapPin className={cn(
+                    "h-4 w-4 transition-colors",
+                    location ? "text-green-600" : "text-medical-blue",
+                    "group-hover:text-medical-blue"
+                  )} />
+                </button>
+              )}
+            </div>
+
+            {/* Search Results Dropdown */}
+            {showSearchResults && (
+              <SearchResultsDropdown
+                results={searchResults}
+                onSelect={() => {
+                  setShowSearchResults(false);
+                  setSearchQuery('');
+                }}
+                query={searchQuery}
+              />
+            )}
+          </div>
+
+          {/* Location Info Banner */}
+          {location && (
+            <div className="mb-4 bg-green-50 border border-green-100 rounded-xl p-3 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-green-600" />
+                <div>
+                  <p className="text-xs font-semibold text-green-900">Searching near you</p>
+                  <p className="text-xs text-green-700">{location.city || location.area}</p>
                 </div>
               </div>
+              <button
+                onClick={() => setShowLocationPicker(true)}
+                className="text-xs text-green-600 font-medium hover:text-green-700"
+              >
+                Change
+              </button>
             </div>
-          </Link>
+          )}
+
+          {/* Location Picker Modal */}
+          <LocationPicker
+            open={showLocationPicker}
+            onClose={() => setShowLocationPicker(false)}
+          />
 
           {/* Quick Actions Grid */}
           <div className="grid grid-cols-4 gap-4">
             {quickActions.map((action, idx) => (
-              <button key={idx} className="flex flex-col items-center gap-2 group">
-                <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center transition-all group-active:scale-95 shadow-sm border border-transparent group-hover:border-gray-100", action.bg)}>
-                  <action.icon className={cn("w-6 h-6", action.color)} />
-                </div>
-                <span className="text-xs font-medium text-gray-600 group-hover:text-gray-900">{action.label}</span>
-              </button>
+              <Link key={idx} href={action.href}>
+                <button className="flex flex-col items-center gap-2 group w-full">
+                  <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center transition-all group-active:scale-95 shadow-sm border border-transparent group-hover:border-gray-100", action.bg)}>
+                    <action.icon className={cn("w-6 h-6", action.color)} />
+                  </div>
+                  <span className="text-xs font-medium text-gray-600 group-hover:text-gray-900">{action.label}</span>
+                </button>
+              </Link>
             ))}
           </div>
         </div>

@@ -2,8 +2,9 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Calendar, Users, User } from 'lucide-react';
+import { Home, Calendar, Users, User, Search, Stethoscope, Clock, FileText, Sparkles, Compass } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAccountMode } from '@/lib/contexts/account-mode-context';
 
 interface NavItem {
   label: string;
@@ -11,20 +12,45 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
 }
 
-const navItems: NavItem[] = [
+// Patient mode navigation
+const patientNavItems: NavItem[] = [
   {
     label: 'Home',
-    href: '/dashboard',
+    href: '/dashboard/dashboard',
     icon: Home,
   },
   {
-    label: 'Doctors',
-    href: '/doctors',
-    icon: Users,
+    label: 'Feed',
+    href: '/feed',
+    icon: Sparkles,
+  },
+  {
+    label: 'Explore',
+    href: '/explore',
+    icon: Compass,
+  },
+  {
+    label: 'Profile',
+    href: '/profile',
+    icon: User,
+  },
+];
+
+// Doctor mode navigation
+const doctorNavItems: NavItem[] = [
+  {
+    label: 'Dashboard',
+    href: '/doctor/dashboard',
+    icon: Stethoscope,
+  },
+  {
+    label: 'Feed',
+    href: '/feed',
+    icon: Sparkles,
   },
   {
     label: 'Appointments',
-    href: '/appointments',
+    href: '/doctor/appointments',
     icon: Calendar,
   },
   {
@@ -36,10 +62,14 @@ const navItems: NavItem[] = [
 
 export function BottomNav() {
   const pathname = usePathname();
+  const { mode } = useAccountMode();
+
+  // Select nav items based on current mode
+  const navItems = mode === 'doctor' ? doctorNavItems : patientNavItems;
 
   const isActive = (href: string) => {
-    if (href === '/dashboard') {
-      return pathname === '/dashboard';
+    if (href === '/dashboard/dashboard' || href === '/doctor/dashboard') {
+      return pathname === href;
     }
     return pathname.startsWith(href);
   };
@@ -49,7 +79,7 @@ export function BottomNav() {
       className={cn(
         'fixed bottom-0 left-0 right-0 z-50',
         'bg-white border-t border-gray-200',
-        'pb-safe'
+        'pb-safe shadow-lg'
       )}
       style={{
         paddingBottom: 'max(env(safe-area-inset-bottom), 0.5rem)',
@@ -70,7 +100,9 @@ export function BottomNav() {
                 'rounded-lg transition-all duration-200',
                 'active:scale-95',
                 active
-                  ? 'text-primary-500'
+                  ? mode === 'doctor'
+                    ? 'text-green-600'
+                    : 'text-medical-blue'
                   : 'text-gray-500 hover:text-gray-700'
               )}
             >
@@ -93,6 +125,15 @@ export function BottomNav() {
           );
         })}
       </div>
+
+      {/* Mode indicator */}
+      {mode === 'doctor' && (
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2">
+          <div className="bg-green-600 text-white text-[10px] px-3 py-0.5 rounded-full font-semibold uppercase tracking-wide shadow-lg">
+            Doctor Mode
+          </div>
+        </div>
+      )}
     </nav>
   );
 }
