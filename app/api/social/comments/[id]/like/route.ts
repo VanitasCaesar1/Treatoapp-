@@ -4,11 +4,12 @@ import { withAuth } from '@workos-inc/authkit-nextjs';
 // POST /api/social/comments/[id]/like - Like a comment
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
+  const params = await props.params;
   try {
     const { user } = await withAuth();
-    
+
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -41,11 +42,12 @@ export async function POST(
 // DELETE /api/social/comments/[id]/like - Unlike a comment
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
+  const params = await props.params;
   try {
     const { user } = await withAuth();
-    
+
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

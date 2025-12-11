@@ -3,11 +3,12 @@ import "./globals.css";
 import { Toaster } from "react-hot-toast";
 import { QueryProvider } from '@/components/providers/query-provider';
 import { CapacitorProvider } from '@/components/providers/capacitor-provider';
-import { AuthKitProvider } from '@workos-inc/authkit-nextjs/components';
 import { UserSessionProvider } from '@/lib/contexts/user-session-context';
 import { LocationProvider } from '@/lib/contexts/location-context';
 import { AccountModeProvider } from '@/lib/contexts/account-mode-context';
 import { NetworkStatus } from '@/components/mobile/network-status';
+import { DeepLinkHandler } from '@/components/auth/deep-link-handler';
+
 
 
 export const viewport: Viewport = {
@@ -36,13 +37,13 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="Patient Portal" />
       </head>
       <body className="antialiased min-h-screen overflow-x-hidden safe-area">
-        <AuthKitProvider>
           <UserSessionProvider>
             <LocationProvider>
               <AccountModeProvider>
                 <CapacitorProvider>
                   <QueryProvider>
                     <NetworkStatus />
+                    <DeepLinkHandler />
                     {children}
                     <Toaster
                       position="top-center"
@@ -88,7 +89,6 @@ export default function RootLayout({
               </AccountModeProvider>
             </LocationProvider>
           </UserSessionProvider>
-        </AuthKitProvider>
       </body>
     </html>
   );

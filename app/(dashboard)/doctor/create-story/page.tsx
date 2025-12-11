@@ -27,7 +27,7 @@ export default function CreateStoryPage() {
     }
 
     if (!isDoctor) {
-        redirect('/dashboard/dashboard');
+        redirect('/dashboard');
     }
 
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {

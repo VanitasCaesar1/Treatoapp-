@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { withAuth } from '@workos-inc/authkit-nextjs';
+import { withAuth } from "@/lib/auth/api-auth";
 
 export async function POST(req: NextRequest) {
   try {
-    const { user } = await withAuth();
+    const { accessToken, user } = await withAuth(req);
     
-    if (!user) {
+    if (!accessToken || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -19,9 +19,7 @@ export async function POST(req: NextRequest) {
     // Validate file type
     const contentType = file.type;
     if (!contentType.startsWith('image/') && !contentType.startsWith('video/')) {
-      return NextResponse.json({ 
-        error: 'Only images and videos are allowed' 
-      }, { status: 400 });
+      return NextResponse.json({ error: 'Only images and videos are allowed' }, { status: 400 });
     }
 
     // Check file size (50MB max for videos, 10MB for images)
@@ -42,6 +40,7 @@ export async function POST(req: NextRequest) {
         method: 'POST',
         headers: {
           'X-User-ID': user.id,
+          'Authorization': `Bearer ${accessToken}`,
         },
         body: uploadFormData,
       }
@@ -49,23 +48,13 @@ export async function POST(req: NextRequest) {
 
     if (!response.ok) {
       const error = await response.json();
-      return NextResponse.json({ 
-        error: error.error || 'Failed to upload media' 
-      }, { status: response.status });
+      return NextResponse.json({ error: error.error || 'Failed to upload media' }, { status: response.status });
     }
 
     const data = await response.json();
     return NextResponse.json(data);
   } catch (error: any) {
     console.error('Error uploading media:', error);
-    return NextResponse.json({ 
-      error: 'Failed to upload media' 
-    }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to upload media' }, { status: 500 });
   }
 }
-
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};

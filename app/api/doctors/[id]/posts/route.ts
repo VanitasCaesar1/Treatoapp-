@@ -3,8 +3,9 @@ import { withAuth } from '@workos-inc/authkit-nextjs';
 
 export async function GET(
     req: NextRequest,
-    { params }: { params: { id: string } }
+    props: { params: Promise<{ id: string }> }
 ) {
+    const params = await props.params;
     try {
         const { user } = await withAuth();
 

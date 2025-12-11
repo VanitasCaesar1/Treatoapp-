@@ -6,6 +6,13 @@ export { useNetwork } from './use-network';
 export { useLongPress } from './use-long-press';
 export { useSwipe } from './use-swipe';
 
+// Native feel hooks
+export { useSwipeBack, SwipeBackIndicator } from './use-swipe-back';
+export { haptic, useHapticButton } from './use-haptic-feedback';
+export { useOptimistic, useOptimisticList } from './use-optimistic';
+export { usePrefetch, usePrefetchOnVisible, useImagePreloader, usePreloadNextPage } from './use-prefetch';
+export { useAppLifecycle, useRefreshOnForeground, useSaveOnBackground, useBackButton as useAndroidBackButton, useExitConfirmation } from './use-app-lifecycle';
+
 // Utility hooks
 export { useDebounce } from './use-debounce';
 export { useCopyToClipboard } from './use-copy-to-clipboard';

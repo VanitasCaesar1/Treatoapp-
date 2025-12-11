@@ -3,8 +3,9 @@ import { withAuth } from '@workos-inc/authkit-nextjs';
 
 export async function POST(
     req: NextRequest,
-    { params }: { params: { id: string } }
+    props: { params: Promise<{ id: string }> }
 ) {
+    const params = await props.params;
     try {
         const { user } = await withAuth();
 
@@ -39,8 +40,9 @@ export async function POST(
 
 export async function DELETE(
     req: NextRequest,
-    { params }: { params: { id: string } }
+    props: { params: Promise<{ id: string }> }
 ) {
+    const params = await props.params;
     try {
         const { user } = await withAuth();
 

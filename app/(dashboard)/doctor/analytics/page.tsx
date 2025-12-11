@@ -20,7 +20,7 @@ export default function AnalyticsPage() {
     }
 
     if (!isDoctor) {
-        redirect('/dashboard/dashboard');
+        redirect('/dashboard');
     }
 
     const { data: analytics, isLoading } = useQuery({

@@ -2,10 +2,11 @@ import { handleAuth } from '@workos-inc/authkit-nextjs';
 import { NextRequest, NextResponse } from 'next/server';
 
 // Custom callback handler that creates user profile if needed
+// Supports both web and mobile (via deep links) authentication flows
 export async function GET(request: NextRequest) {
   // First, handle the WorkOS authentication
   const authResponse = await handleAuth({ returnPathname: '/dashboard' })(request);
-  
+
   // If auth was successful (redirect response), try to ensure profile exists
   if (authResponse.status === 302 || authResponse.status === 307) {
     try {
@@ -25,6 +26,42 @@ export async function GET(request: NextRequest) {
       console.error('Failed to ensure profile exists:', error);
     }
   }
-  
+
   return authResponse;
+}
+
+/**
+ * POST endpoint for mobile deep link callback
+ * Handles authentication code from mobile app
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const { code, state } = await request.json();
+
+    if (!code) {
+      return NextResponse.json({ error: 'Missing code' }, { status: 400 });
+    }
+
+    // Create a new request with the code as query params
+    const callbackUrl = new URL('/callback', request.url);
+    callbackUrl.searchParams.set('code', code);
+    if (state) {
+      callbackUrl.searchParams.set('state', state);
+    }
+
+    // Create a new request object
+    const callbackRequest = new NextRequest(callbackUrl, {
+      method: 'GET',
+      headers: request.headers,
+    });
+
+    // Use the existing GET handler to process the auth
+    return await GET(callbackRequest);
+  } catch (error) {
+    console.error('Mobile callback error:', error);
+    return NextResponse.json(
+      { error: 'Authentication failed' },
+      { status: 500 }
+    );
+  }
 }

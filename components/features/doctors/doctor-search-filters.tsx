@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, SlidersHorizontal, X, Star, MapPin, Calendar, Check } from 'lucide-react';
+import { SlidersHorizontal, Star, MapPin, Calendar, Check, Navigation } from 'lucide-react';
 import { useKeyboard } from '@/lib/hooks/use-keyboard';
 import { Button } from '@/components/ui/button';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
@@ -9,6 +9,7 @@ import { SelectMobile } from '@/components/ui/select-mobile';
 import { FloatingLabelInput } from '@/components/ui/input-floating';
 import { DoctorSearchFilters as Filters } from '@/lib/types/doctor';
 import { cn } from '@/lib/utils';
+import { useLocation } from '@/lib/contexts/location-context';
 
 interface DoctorSearchFiltersProps {
   filters: Filters;
@@ -30,11 +31,20 @@ const SPECIALTIES = [
 
 const QUICK_FILTERS = [
   { label: 'All', filters: {} },
+  { label: 'Nearest', filters: { sortBy: 'distance' } },
   { label: 'Top Rated', filters: { rating: 4.5 } },
   { label: 'Experienced', filters: { experience: 10 } },
   { label: 'Cardiology', filters: { specialty: 'cardiology' } },
   { label: 'Dermatology', filters: { specialty: 'dermatology' } },
-  { label: 'Pediatrics', filters: { specialty: 'pediatrics' } },
+];
+
+const DISTANCE_OPTIONS = [
+  { value: '', label: 'Any Distance' },
+  { value: '2', label: 'Within 2 km' },
+  { value: '5', label: 'Within 5 km' },
+  { value: '10', label: 'Within 10 km' },
+  { value: '25', label: 'Within 25 km' },
+  { value: '50', label: 'Within 50 km' },
 ];
 
 export function DoctorSearchFilters({
@@ -44,6 +54,7 @@ export function DoctorSearchFilters({
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [tempFilters, setTempFilters] = useState<Filters>(filters);
   const { hideKeyboard } = useKeyboard();
+  const { location } = useLocation();
 
   // Sync temp filters when sheet opens
   const openFilters = () => {
@@ -96,7 +107,9 @@ export function DoctorSearchFilters({
     filters.specialty ||
     filters.location ||
     filters.rating ||
-    filters.experience;
+    filters.experience ||
+    (filters as any).distance ||
+    (filters as any).sortBy;
 
   const isQuickFilterActive = (quickFilters: any) => {
     if (Object.keys(quickFilters).length === 0) {
@@ -111,7 +124,9 @@ export function DoctorSearchFilters({
     filters.specialty,
     filters.location,
     filters.rating,
-    filters.experience
+    filters.experience,
+    (filters as any).distance,
+    (filters as any).sortBy
   ].filter(Boolean).length;
 
   return (
@@ -183,6 +198,28 @@ export function DoctorSearchFilters({
                   ...SPECIALTIES.map(s => ({ value: s.toLowerCase(), label: s }))
                 ]}
               />
+            </div>
+
+            {/* Distance */}
+            <div className="space-y-3">
+              <label className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                <Navigation className="h-4 w-4 text-medical-blue" />
+                Distance
+              </label>
+              {location ? (
+                <SelectMobile
+                  label="Maximum Distance"
+                  value={(tempFilters as any).distance?.toString() || ''}
+                  onChange={(val) => handleTempFilterChange('distance' as any, val ? parseInt(val) : undefined)}
+                  options={DISTANCE_OPTIONS}
+                />
+              ) : (
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                  <p className="text-sm text-amber-700">
+                    Enable location to filter by distance
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Location */}

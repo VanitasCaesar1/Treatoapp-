@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { Search, MapPin, Bell, Calendar, ChevronRight, Loader2, Pill, FlaskConical, Stethoscope, Video, Activity, Zap, Clock } from 'lucide-react';
@@ -185,7 +187,7 @@ export default function DashboardPage() {
     { icon: FlaskConical, label: 'Lab Tests', color: 'text-purple-600', bg: 'bg-purple-50', href: '/lab-tests' },
     { icon: Pill, label: 'Medicines', color: 'text-emerald-600', bg: 'bg-emerald-50', href: '/medicines' },
     { icon: Video, label: 'Teleconsult', color: 'text-blue-600', bg: 'bg-blue-50', href: '/search?type=online' },
-    { icon: Activity, label: 'Health', color: 'text-orange-600', bg: 'bg-orange-50', href: '/medical-records' },
+    { icon: Activity, label: 'Reports', color: 'text-orange-600', bg: 'bg-orange-50', href: '/lab-reports' },
   ];
 
   const healthTips = [

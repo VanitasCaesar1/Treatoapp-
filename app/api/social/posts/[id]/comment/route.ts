@@ -3,8 +3,9 @@ import { withAuth } from '@workos-inc/authkit-nextjs';
 
 export async function POST(
     req: NextRequest,
-    { params }: { params: { id: string } }
+    props: { params: Promise<{ id: string }> }
 ) {
+    const params = await props.params;
     try {
         const { user } = await withAuth();
 
@@ -16,7 +17,7 @@ export async function POST(
         const body = await req.json();
 
         const response = await fetch(
-            `${process.env.SOCIAL_SERVICE_URL || 'http://localhost:8090'}/api/posts/${postId}/comment`,
+            `${process.env.SOCIAL_SERVICE_URL || 'http://localhost:8090'}/api/posts/${postId}/comments`,
             {
                 method: 'POST',
                 headers: {
@@ -28,21 +29,22 @@ export async function POST(
         );
 
         if (!response.ok) {
-            return NextResponse.json({ error: 'Failed to add comment' }, { status: response.status });
+            return NextResponse.json({ error: 'Failed to create comment' }, { status: response.status });
         }
 
         const data = await response.json();
         return NextResponse.json(data);
     } catch (error: any) {
-        console.error('Error adding comment:', error);
-        return NextResponse.json({ error: 'Failed to add comment' }, { status: 500 });
+        console.error('Error creating comment:', error);
+        return NextResponse.json({ error: 'Failed to create comment' }, { status: 500 });
     }
 }
 
 export async function GET(
     req: NextRequest,
-    { params }: { params: { id: string } }
+    props: { params: Promise<{ id: string }> }
 ) {
+    const params = await props.params;
     try {
         const { user } = await withAuth();
 
@@ -74,5 +76,42 @@ export async function GET(
     } catch (error: any) {
         console.error('Error fetching comments:', error);
         return NextResponse.json({ error: 'Failed to fetch comments' }, { status: 500 });
+    }
+}
+
+export async function DELETE(
+    req: NextRequest,
+    props: { params: Promise<{ id: string }> }
+) {
+    const params = await props.params;
+    try {
+        const { user } = await withAuth();
+
+        if (!user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const commentId = params.id;
+
+        const response = await fetch(
+            `${process.env.SOCIAL_SERVICE_URL || 'http://localhost:8090'}/api/comments/${commentId}`,
+            {
+                method: 'DELETE',
+                headers: {
+                    'X-User-ID': user.id,
+                    'Content-Type': 'application/json',
+                },
+            }
+        );
+
+        if (!response.ok) {
+            return NextResponse.json({ error: 'Failed to delete comment' }, { status: response.status });
+        }
+
+        const data = await response.json();
+        return NextResponse.json(data);
+    } catch (error: any) {
+        console.error('Error deleting comment:', error);
+        return NextResponse.json({ error: 'Failed to delete comment' }, { status: 500 });
     }
 }

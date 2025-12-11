@@ -4,11 +4,21 @@ import { KeyboardResize, KeyboardStyle } from '@capacitor/keyboard';
 const config: CapacitorConfig = {
   appId: 'com.treato.treato',
   appName: 'Treato',
-  webDir: 'out',
+  webDir: 'public', // Temporary directory for initial assets
   server: {
-    androidScheme: 'https',
-    // Allow clear text traffic for local development
+    // For Android emulator: 10.0.2.2 maps to host machine's localhost
+    // For physical device: use your computer's local IP (e.g., 192.168.1.x)
+    url: process.env.NODE_ENV === 'production' ? undefined : 'http://10.0.2.2:3000',
     cleartext: true,
+    androidScheme: 'http',
+  },
+  // iOS configuration for deep linking
+  ios: {
+    scheme: 'treato', // Custom URL scheme: treato://
+  },
+  // Android configuration
+  android: {
+    allowMixedContent: true, // Allow HTTP in development
   },
   plugins: {
     SplashScreen: {

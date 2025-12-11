@@ -1,14 +1,11 @@
-
 import { NextRequest, NextResponse } from "next/server";
-import { withAuth } from "@workos-inc/authkit-nextjs";
+import { withAuth, createBackendHeaders } from "@/lib/auth/api-auth";
 
 export async function GET(req: NextRequest) {
   try {
-    // Get auth data from WorkOS
-    const { accessToken } = await withAuth({ ensureSignedIn: true });
+    const { accessToken } = await withAuth(req);
 
     if (!accessToken) {
-      console.error('No access token available');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -36,21 +33,16 @@ export async function GET(req: NextRequest) {
     queryParams.append("limit", limit);
     queryParams.append("offset", offset);
 
-    // Forward the request to the backend with minimal headers
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/appointments?${queryParams.toString()}`, {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-    });
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/appointments?${queryParams.toString()}`,
+      { headers: createBackendHeaders(accessToken) }
+    );
 
     if (!response.ok) {
       return NextResponse.json({ error: 'Failed to fetch appointments' }, { status: response.status });
     }
 
     const appointmentsData = await response.json();
-
     return NextResponse.json(appointmentsData);
   } catch (error: any) {
     console.error('Error fetching appointments:', error);
@@ -63,33 +55,28 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const data = await req.json();
-
-    // Get auth data from WorkOS
-    const { accessToken } = await withAuth({ ensureSignedIn: true });
+    const { accessToken } = await withAuth(req);
 
     if (!accessToken) {
-      console.error('No access token available');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Forward the request to the backend with minimal headers
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/appointments`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      body: JSON.stringify(data),
-    });
+    const data = await req.json();
+
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/appointments`,
+      {
+        method: 'POST',
+        headers: createBackendHeaders(accessToken),
+        body: JSON.stringify(data),
+      }
+    );
 
     if (!response.ok) {
       return NextResponse.json({ error: 'Failed to create appointment' }, { status: response.status });
     }
 
     const createdAppointment = await response.json();
-
     return NextResponse.json(createdAppointment);
   } catch (error: any) {
     console.error('Error creating appointment:', error);

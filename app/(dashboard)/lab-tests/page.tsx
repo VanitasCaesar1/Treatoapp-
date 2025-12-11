@@ -1,11 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { FlaskConical, Search, Filter, ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
+import { FlaskConical, Search, AlertCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
 
 const labTests = [
     {
@@ -84,26 +82,18 @@ export default function LabTestsPage() {
     );
 
     return (
-        <div className="min-h-screen bg-gray-50 pb-24">
-            {/* Header */}
-            <div className="bg-white sticky top-0 z-10 border-b border-gray-100 px-4 py-3">
-                <div className="flex items-center gap-3">
-                    <Link href="/dashboard/dashboard">
-                        <button className="p-2 -ml-2 hover:bg-gray-100 rounded-full">
-                            <ArrowLeft className="w-5 h-5 text-gray-600" />
-                        </button>
-                    </Link>
+        <div className="min-h-screen pb-24">
+            <div className="p-4 space-y-4">
+                {/* Page Title */}
+                <div className="flex items-center gap-3 mb-2">
+                    <div className="p-2 bg-purple-100 rounded-xl">
+                        <FlaskConical className="h-5 w-5 text-purple-600" />
+                    </div>
                     <div>
-                        <h1 className="font-bold text-gray-900 text-lg flex items-center gap-2">
-                            <FlaskConical className="h-5 w-5 text-purple-600" />
-                            Lab Tests
-                        </h1>
+                        <h1 className="font-bold text-gray-900 text-lg">Lab Tests</h1>
                         <p className="text-xs text-gray-500">Book diagnostic tests at home</p>
                     </div>
                 </div>
-            </div>
-
-            <div className="p-4 space-y-4">
                 {/* Search */}
                 <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -180,6 +170,14 @@ export default function LabTestsPage() {
                         <p className="text-sm text-gray-500">Try adjusting your search</p>
                     </div>
                 )}
+
+                {/* Demo Notice */}
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-2">
+                    <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                    <p className="text-xs text-amber-700">
+                        This is a demo page. Lab test booking will be available soon with partner labs.
+                    </p>
+                </div>
             </div>
         </div>
     );

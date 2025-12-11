@@ -10,18 +10,21 @@ import {
   MapPin,
   Calendar,
   Heart,
-  AlertTriangle,
   Edit3,
   Loader2,
   Fingerprint,
   ShieldCheck,
   LogOut,
-  Users,
   FileText,
   FlaskConical,
   CreditCard,
   Settings,
-  ChevronRight
+  ChevronRight,
+  QrCode,
+  AlertTriangle,
+  RefreshCw,
+  Download,
+  Share2
 } from 'lucide-react';
 import { showToast } from '@/lib/utils/toast';
 import { useCapacitor } from '@/lib/capacitor';
@@ -36,11 +39,11 @@ import { FamilyMember } from '@/lib/types/family-member';
 import { EditableProfileForm } from '@/components/profile/editable-profile-form';
 import { useUserRoles } from '@/lib/hooks/use-user-roles';
 import { useAccountMode } from '@/lib/contexts/account-mode-context';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { AccountSwitcher } from '@/components/navigation/account-switcher';
 import { Stethoscope } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 export default function ProfilePage() {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [profile, setProfile] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
@@ -52,9 +55,14 @@ export default function ProfilePage() {
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
   const [showFamilyForm, setShowFamilyForm] = useState(false);
   const [editingMember, setEditingMember] = useState<FamilyMember | undefined>();
-  const [tapCount, setTapCount] = useState(0);
-  const [tapTimer, setTapTimer] = useState<NodeJS.Timeout | null>(null);
-  const [showAccountSwitcher, setShowAccountSwitcher] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [emergencyQR, setEmergencyQR] = useState<{
+    qr_data: string;
+    emergency_url: string;
+    expires_at: string;
+  } | null>(null);
+  const [qrLoading, setQrLoading] = useState(false);
+  const [showQRModal, setShowQRModal] = useState(false);
   const capacitor = useCapacitor();
   const { isDoctor, roles } = useUserRoles();
   const { mode, setMode } = useAccountMode();
@@ -114,6 +122,53 @@ export default function ProfilePage() {
       setBiometricEnabled(enabled);
     }
   }, []); // capacitor is now stable
+
+  const generateEmergencyQR = useCallback(async () => {
+    if (!profile?.patient?.id) return;
+    
+    try {
+      setQrLoading(true);
+      const response = await fetch(`/api/emergency/patients/${profile.patient.id}/qr`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setEmergencyQR(data);
+        setShowQRModal(true);
+        showToast.success('Emergency QR generated', 'qr-success');
+      } else {
+        throw new Error('Failed to generate QR');
+      }
+    } catch (error) {
+      console.error('Failed to generate emergency QR:', error);
+      showToast.error('Failed to generate emergency QR', 'qr-error');
+    } finally {
+      setQrLoading(false);
+    }
+  }, [profile?.patient?.id]);
+
+  const shareEmergencyQR = async () => {
+    if (!emergencyQR) return;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Emergency Medical Info',
+          text: 'My emergency medical information QR code',
+          url: emergencyQR.emergency_url,
+        });
+      } catch (error) {
+        // User cancelled or share failed
+        console.log('Share cancelled');
+      }
+    } else {
+      // Fallback: copy to clipboard
+      await navigator.clipboard.writeText(emergencyQR.emergency_url);
+      showToast.success('Link copied to clipboard', 'link-copied');
+    }
+  };
 
   useEffect(() => {
     fetchProfile();
@@ -266,82 +321,10 @@ export default function ProfilePage() {
   const availableRoles = roles.filter((r: string) => r !== 'patient'); // Exclude patient as it's default
   const hasMultipleRoles = availableRoles.length >= 1; // Has doctor/admin etc.
 
-  // Double-tap: Cycle through roles
-  const handleAvatarDoubleTap = () => {
-    if (!hasMultipleRoles) return;
-
-    // Cycle through: patient → doctor → admin → ... → patient
-    const modeOrder: AccountMode[] = ['patient', 'doctor', 'admin'];
-    const currentIndex = modeOrder.indexOf(mode as AccountMode);
-    const nextIndex = (currentIndex + 1) % modeOrder.length;
-    const nextMode = modeOrder[nextIndex];
-
-    // Check if user has this role
-    if (nextMode === 'patient' || roles.includes(nextMode)) {
-      setMode(nextMode);
-      showToast.success(`Switched to ${nextMode} mode`, 'mode-switch');
-
-      // Navigate to appropriate dashboard
-      if (nextMode === 'doctor') {
-        window.location.href = '/doctor/dashboard';
-      } else if (nextMode === 'admin') {
-        window.location.href = '/admin/dashboard';
-      } else {
-        window.location.href = '/dashboard/dashboard';
-      }
-    } else {
-      // Skip to next
-      handleAvatarDoubleTap();
-    }
-  };
-
-  // Long press: Show modal
-  const handleAvatarLongPress = () => {
-    if (hasMultipleRoles) {
-      setShowAccountSwitcher(true);
-    }
-  };
-
-  // Touch handlers for double-tap and long-press
-  const handleAvatarTouchStart = () => {
-    if (!hasMultipleRoles) return;
-
-    // Start long press timer
-    const longPressTimer = setTimeout(() => {
-      handleAvatarLongPress();
-    }, 500); // 500ms for long press
-
-    setTapTimer(longPressTimer);
-  };
-
-  const handleAvatarTouchEnd = () => {
-    if (!hasMultipleRoles) return;
-
-    // Clear long press timer
-    if (tapTimer) {
-      clearTimeout(tapTimer);
-      setTapTimer(null);
-    }
-
-    // Detect double tap
-    setTapCount(prev => prev + 1);
-
-    if (tapCount + 1 === 2) {
-      // Double tap detected!
-      handleAvatarDoubleTap();
-      setTapCount(0);
-    } else {
-      // Reset after 300ms
-      const resetTimer = setTimeout(() => setTapCount(0), 300);
-      setTimeout(() => clearTimeout(resetTimer), 301);
-    }
-  };
-
-  const handleAvatarClick = () => {
-    // For desktop: just show modal if has multiple roles
-    if (hasMultipleRoles) {
-      setShowAccountSwitcher(true);
-    }
+  const handleLogout = () => {
+    setLoggingOut(true);
+    // Navigate to WorkOS sign out route
+    router.push('/api/auth/signout');
   };
 
   return (
@@ -402,15 +385,7 @@ export default function ProfilePage() {
 
             {/* Avatar & Name */}
             <div className="relative mb-3">
-              <div
-                onTouchStart={handleAvatarTouchStart}
-                onTouchEnd={handleAvatarTouchEnd}
-                onClick={handleAvatarClick}
-                className={cn(
-                  "relative inline-block select-none",
-                  hasMultipleRoles && "cursor-pointer active:scale-95 transition-transform"
-                )}
-              >
+              <div className="relative inline-block">
                 <Avatar className="h-24 w-24 ring-4 ring-white shadow-xl">
                   <AvatarImage src={profile?.user?.profile_pic || ''} />
                   <AvatarFallback className="text-3xl bg-gradient-to-br from-blue-100 to-blue-50 text-medical-blue font-bold">
@@ -424,7 +399,7 @@ export default function ProfilePage() {
                 {hasMultipleRoles && (
                   <div className="absolute -bottom-2 left-1/2 -translate-x-1/2">
                     <div className={cn(
-                      "rounded-full px-3 py-1 flex items-center gap-1 shadow-lg animate-pulse",
+                      "rounded-full px-3 py-1 flex items-center gap-1 shadow-lg",
                       mode === 'doctor' && "bg-green-600",
                       mode === 'admin' && "bg-purple-600",
                       mode === 'patient' && isDoctor && "bg-gray-600"
@@ -438,13 +413,6 @@ export default function ProfilePage() {
                   </div>
                 )}
               </div>
-
-              {/* Hint text for role switching */}
-              {hasMultipleRoles && (
-                <p className="text-[10px] text-gray-400 text-center mt-3">
-                  Double tap to switch • Long press for menu
-                </p>
-              )}
             </div>
 
             <h1 className="text-xl font-bold text-gray-900 text-center">
@@ -465,12 +433,16 @@ export default function ProfilePage() {
           {/* 2. Quick Actions Grid */}
           <div className="grid grid-cols-4 gap-3 px-1">
             {[
-              { icon: Calendar, label: 'Appointments', color: 'text-blue-600', bg: 'bg-blue-50' },
-              { icon: FileText, label: 'Prescriptions', color: 'text-purple-600', bg: 'bg-purple-50' }, // Need to import FileText
-              { icon: FlaskConical, label: 'Lab Reports', color: 'text-teal-600', bg: 'bg-teal-50' }, // Need to import FlaskConical
-              { icon: CreditCard, label: 'Payments', color: 'text-orange-600', bg: 'bg-orange-50' } // Need to import CreditCard
+              { icon: Calendar, label: 'Appointments', color: 'text-blue-600', bg: 'bg-blue-50', href: '/appointments' },
+              { icon: FileText, label: 'Prescriptions', color: 'text-purple-600', bg: 'bg-purple-50', href: '/medical-records' },
+              { icon: FlaskConical, label: 'Lab Reports', color: 'text-teal-600', bg: 'bg-teal-50', href: '/lab-reports' },
+              { icon: CreditCard, label: 'Payments', color: 'text-orange-600', bg: 'bg-orange-50', href: '/payments' }
             ].map((action, i) => (
-              <button key={i} className="flex flex-col items-center gap-2 group">
+              <button 
+                key={i} 
+                onClick={() => router.push(action.href)}
+                className="flex flex-col items-center gap-2 group"
+              >
                 <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center shadow-sm border border-gray-100 transition-all group-active:scale-95", action.bg)}>
                   <action.icon className={cn("h-6 w-6", action.color)} />
                 </div>
@@ -571,7 +543,57 @@ export default function ProfilePage() {
             />
           </div>
 
-          {/* 5. Settings / Account Status */}
+          {/* 5. Emergency QR Code Section */}
+          <div className="bg-gradient-to-br from-red-50 to-orange-50 rounded-3xl p-5 shadow-sm border border-red-100">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center">
+                <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center mr-3">
+                  <AlertTriangle className="h-5 w-5 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900 text-lg">Emergency QR</h3>
+                  <p className="text-xs text-gray-500">Quick access to vital medical info</p>
+                </div>
+              </div>
+            </div>
+            
+            <p className="text-sm text-gray-600 mb-4">
+              Generate a QR code that emergency responders can scan to view your critical medical information including blood group, allergies, and emergency contacts.
+            </p>
+            
+            <div className="flex gap-3">
+              <Button
+                onClick={generateEmergencyQR}
+                disabled={qrLoading || !profile?.patient?.id}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white rounded-xl h-11"
+              >
+                {qrLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <QrCode className="h-4 w-4 mr-2" />
+                )}
+                {emergencyQR ? 'View QR Code' : 'Generate QR'}
+              </Button>
+              
+              {emergencyQR && (
+                <Button
+                  variant="outline"
+                  onClick={shareEmergencyQR}
+                  className="border-red-200 text-red-600 hover:bg-red-50 rounded-xl h-11"
+                >
+                  <Share2 className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+            
+            {emergencyQR && (
+              <p className="text-xs text-gray-500 mt-3 text-center">
+                Expires: {new Date(emergencyQR.expires_at).toLocaleDateString()}
+              </p>
+            )}
+          </div>
+
+          {/* 6. Settings / Account Status */}
           <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100 space-y-5">
             <div className="flex items-center">
               <Settings className="h-5 w-5 text-gray-400 mr-2" />
@@ -614,9 +636,14 @@ export default function ProfilePage() {
           </div>
 
           <div className="pt-4 pb-8">
-            <Button variant="outline" className="w-full rounded-full border-red-100 text-red-600 hover:bg-red-50 hover:text-red-700 h-12 font-medium">
+            <Button
+              variant="outline"
+              className="w-full rounded-full border-red-100 text-red-600 hover:bg-red-50 hover:text-red-700 h-12 font-medium"
+              onClick={handleLogout}
+              disabled={loggingOut}
+            >
               <LogOut className="h-4 w-4 mr-2" />
-              Sign Out
+              {loggingOut ? 'Logging out...' : 'Log Out'}
             </Button>
             <p className="text-center text-xs text-gray-400 mt-4">
               Version 1.0.0 • Treato Patient App
@@ -633,10 +660,64 @@ export default function ProfilePage() {
         member={editingMember}
       />
 
-      {/* Account Switcher Modal - Only shows for users with multiple roles */}
-      {hasMultipleRoles && (
-        <AccountSwitcher open={showAccountSwitcher} onClose={() => setShowAccountSwitcher(false)} />
+      {/* Emergency QR Modal */}
+      {showQRModal && emergencyQR && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowQRModal(false)}>
+          <div className="bg-white rounded-3xl p-6 max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
+            <div className="text-center">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <AlertTriangle className="h-8 w-8 text-red-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Emergency QR Code</h3>
+              <p className="text-sm text-gray-500 mb-6">
+                Scan this code to access emergency medical information
+              </p>
+              
+              {/* QR Code Display */}
+              <div className="bg-white border-4 border-gray-100 rounded-2xl p-4 mb-4 inline-block">
+                <img 
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(emergencyQR.emergency_url)}`}
+                  alt="Emergency QR Code"
+                  className="w-48 h-48"
+                />
+              </div>
+              
+              <div className="space-y-3">
+                <div className="flex gap-2">
+                  <Button
+                    onClick={shareEmergencyQR}
+                    className="flex-1 bg-red-600 hover:bg-red-700 text-white rounded-xl"
+                  >
+                    <Share2 className="h-4 w-4 mr-2" />
+                    Share
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={generateEmergencyQR}
+                    disabled={qrLoading}
+                    className="border-gray-200 rounded-xl"
+                  >
+                    {qrLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                  </Button>
+                </div>
+                
+                <Button
+                  variant="ghost"
+                  onClick={() => setShowQRModal(false)}
+                  className="w-full text-gray-500"
+                >
+                  Close
+                </Button>
+              </div>
+              
+              <p className="text-xs text-gray-400 mt-4">
+                Valid until {new Date(emergencyQR.expires_at).toLocaleDateString()}
+              </p>
+            </div>
+          </div>
+        </div>
       )}
+
     </div>
   );
 }

@@ -1,13 +1,11 @@
-
 import { NextRequest, NextResponse } from "next/server";
-import { withAuth } from '@workos-inc/authkit-nextjs';
+import { withAuth, createBackendHeaders } from "@/lib/auth/api-auth";
 
 export async function GET(req: NextRequest) {
   try {
-    const { accessToken, user } = await withAuth({ ensureSignedIn: true });
+    const { accessToken } = await withAuth(req);
     
     if (!accessToken) {
-      console.error('No access token available');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -33,29 +31,16 @@ export async function GET(req: NextRequest) {
     queryParams.append("limit", limit);
     queryParams.append("offset", offset);
 
-    // Forward the request to the backend with minimal headers
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/doctors/search?${queryParams.toString()}`, {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-    });
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/doctors/search?${queryParams.toString()}`,
+      { headers: createBackendHeaders(accessToken) }
+    );
 
     if (!response.ok) {
       return NextResponse.json({ error: 'Failed to search doctors' }, { status: response.status });
     }
 
     const searchResults = await response.json();
-    
-    // Log the raw response for debugging
-    console.log('=== DOCTOR SEARCH API RESPONSE ===');
-    console.log('Full response:', JSON.stringify(searchResults, null, 2));
-    if (searchResults.doctors && Array.isArray(searchResults.doctors)) {
-      console.log('Number of doctors:', searchResults.doctors.length);
-      console.log('First doctor sample:', JSON.stringify(searchResults.doctors[0], null, 2));
-    }
-    console.log('===================================');
     
     // Normalize doctor data to match frontend expectations
     if (searchResults.doctors && Array.isArray(searchResults.doctors)) {
@@ -94,6 +79,9 @@ export async function GET(req: NextRequest) {
           specialization: specialization?.secondary || [],
           experience: doctor.years_of_experience || doctor.experience || 0,
           languages: Array.isArray(languages) ? languages : [],
+          // Pass through availability data
+          available_slots_today: doctor.available_slots_today,
+          next_available_date: doctor.next_available_date,
         };
       });
     }

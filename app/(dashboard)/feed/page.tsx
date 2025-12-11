@@ -85,7 +85,7 @@ export default function FeedPage() {
             <div className="sticky top-0 z-10 bg-white border-b border-gray-100">
                 <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
                     <h1 className="font-bold text-xl">Feed</h1>
-                    <Link href="/dashboard/dashboard">
+                    <Link href="/dashboard">
                         <button className="text-sm text-medical-blue font-medium">
                             Dashboard
                         </button>

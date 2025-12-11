@@ -46,6 +46,15 @@ function BookAppointmentContent() {
     const [selectedOrgId, setSelectedOrgId] = useState<string | null>(orgId);
     const [loadingOrganizations, setLoadingOrganizations] = useState(false);
 
+    // Follow-up validity state
+    const [followUpValidity, setFollowUpValidity] = useState<{
+        is_valid: boolean;
+        valid_until?: string;
+        original_date?: string;
+        follow_up_fee?: number;
+    } | null>(null);
+    const [checkingValidity, setCheckingValidity] = useState(false);
+
     // Generate next 14 days for horizontal calendar
     const nextDays = Array.from({ length: 14 }, (_, i) => addDays(new Date(), i));
 
@@ -154,6 +163,34 @@ function BookAppointmentContent() {
         };
         fetchOrganizations();
     }, [params.doctorId, orgId]);
+
+    // Check follow-up validity when profile and org are loaded
+    useEffect(() => {
+        const checkValidity = async () => {
+            const effectiveOrgId = orgId || selectedOrgId;
+            if (!profile?.user?.patient_id || !params.doctorId || !effectiveOrgId) return;
+
+            setCheckingValidity(true);
+            try {
+                const response = await fetch(
+                    `/api/appointments/check-validity?patient_id=${profile.user.patient_id}&doctor_id=${params.doctorId}&org_id=${effectiveOrgId}`,
+                    { credentials: 'include' }
+                );
+                if (response.ok) {
+                    const data = await response.json();
+                    setFollowUpValidity(data);
+                    if (data.is_valid) {
+                        toast.success('Free follow-up available!', { icon: '🎉' });
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking validity:', error);
+            } finally {
+                setCheckingValidity(false);
+            }
+        };
+        checkValidity();
+    }, [profile, params.doctorId, orgId, selectedOrgId]);
 
     // Fetch slots when date or orgId changes
     useEffect(() => {
@@ -312,28 +349,27 @@ function BookAppointmentContent() {
             });
 
             if (paymentResponse.success && (paymentResponse.url || paymentResponse.redirectUrl)) {
-                // Save appointment data returned from API (includes merchantTransactionId)
-                if (paymentResponse.appointmentData) {
-                    localStorage.setItem('pendingAppointment', JSON.stringify(paymentResponse.appointmentData));
-                } else {
-                    // Fallback: create appointment data manually
-                    localStorage.setItem('pendingAppointment', JSON.stringify({
-                        merchantTransactionId: paymentResponse.merchantTransactionId,
-                        userId: user.id,
-                        doctorId: params.doctorId,
-                        doctorName: doctor.name,
-                        appointmentDate: format(date, 'yyyy-MM-dd'),
-                        appointmentTime: selectedSlot,
-                        consultationType: consultationType,
-                        patientName: selectedMember.name,
-                        patientPhone: selectedMember.phone || user.mobile,
-                        patientEmail: selectedMember.email || user.email,
-                        forMemberId: selectedMember.id === 'self' ? null : selectedMember.id,
-                        forMemberRelationship: selectedMember.relationship,
-                        amount,
-                        timestamp: Date.now()
-                    }));
-                }
+                // Save booking intent for success/failed pages
+                const bookingData = {
+                    merchantTransactionId: paymentResponse.merchantTransactionId,
+                    userId: user.id,
+                    doctorId: params.doctorId,
+                    doctorName: doctor.name,
+                    date: format(date, 'MMM d, yyyy'),
+                    time: selectedSlot,
+                    appointmentDate: format(date, 'yyyy-MM-dd'),
+                    appointmentTime: selectedSlot,
+                    consultationType: consultationType,
+                    patientName: selectedMember.name,
+                    patientPhone: selectedMember.phone || user.mobile,
+                    patientEmail: selectedMember.email || user.email,
+                    forMemberId: selectedMember.id === 'self' ? null : selectedMember.id,
+                    forMemberRelationship: selectedMember.relationship,
+                    orgId: orgId || selectedOrgId,
+                    amount,
+                    timestamp: Date.now()
+                };
+                localStorage.setItem('bookingIntent', JSON.stringify(bookingData));
 
                 // Redirect to PhonePe payment page
                 window.location.href = paymentResponse.url || paymentResponse.redirectUrl;
@@ -600,14 +636,32 @@ function BookAppointmentContent() {
 
             {/* Bottom Bar */}
             <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 shadow-[0_-8px_32px_-8px_rgba(0,0,0,0.08)] z-30">
+                {/* Follow-up Banner */}
+                {followUpValidity?.is_valid && (
+                    <div className="bg-gradient-to-r from-green-500 to-emerald-500 px-4 py-2 text-white text-center">
+                        <p className="text-sm font-semibold flex items-center justify-center gap-2">
+                            <CheckCircle2 className="w-4 h-4" />
+                            Free Follow-up! Valid until {followUpValidity.valid_until ? format(new Date(followUpValidity.valid_until), 'MMM d, yyyy') : 'N/A'}
+                        </p>
+                    </div>
+                )}
                 <div className="max-w-2xl mx-auto p-5 flex items-center gap-4">
                     <div className="flex-1">
-                        <p className="text-xs text-gray-500 font-medium uppercase tracking-wide mb-1">Consultation Fee</p>
-                        <p className="text-3xl font-bold text-gray-900">₹{currentFee}</p>
+                        <p className="text-xs text-gray-500 font-medium uppercase tracking-wide mb-1">
+                            {followUpValidity?.is_valid ? 'Follow-up Fee' : 'Consultation Fee'}
+                        </p>
+                        {followUpValidity?.is_valid ? (
+                            <div className="flex items-center gap-2">
+                                <p className="text-3xl font-bold text-green-600">₹0</p>
+                                <p className="text-lg text-gray-400 line-through">₹{currentFee}</p>
+                            </div>
+                        ) : (
+                            <p className="text-3xl font-bold text-gray-900">₹{currentFee}</p>
+                        )}
                     </div>
                     <Button
                         className="flex-[1.2] bg-gray-900 hover:bg-gray-800 text-white h-14 text-base font-semibold rounded-xl shadow-lg transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed border-none"
-                        disabled={!date || !selectedSlot || submitting}
+                        disabled={!date || !selectedSlot || submitting || checkingValidity}
                         onClick={handleBookAppointment}
                     >
                         {submitting ? (
@@ -615,6 +669,8 @@ function BookAppointmentContent() {
                                 <Loader2 className="w-5 h-5 animate-spin mr-2" />
                                 Processing...
                             </>
+                        ) : followUpValidity?.is_valid ? (
+                            'Book Free Follow-up'
                         ) : (
                             'Continue to Pay'
                         )}

@@ -1,10 +1,9 @@
-
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@workos-inc/authkit-nextjs';
+import { withAuth } from '@/lib/auth/api-auth';
 
 export async function GET(request: NextRequest) {
     try {
-        const { user } = await withAuth({ ensureSignedIn: false });
+        const { user } = await withAuth(request);
 
         if (!user) {
             return NextResponse.json({ user: null }, { status: 200 });
@@ -12,7 +11,7 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({
             user: {
-                profilePictureUrl: user.profilePictureUrl,
+                id: user.id,
                 firstName: user.firstName,
                 lastName: user.lastName,
                 email: user.email,

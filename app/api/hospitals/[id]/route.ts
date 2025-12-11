@@ -1,46 +1,29 @@
-import { NextRequest, NextResponse } from "next/server";
-import { withAuth } from '@workos-inc/authkit-nextjs';
+import { NextRequest, NextResponse } from 'next/server';
+import { createBackendHeaders } from '@/lib/auth/api-auth';
+import { cookies } from 'next/headers';
 
 export async function GET(
-    req: NextRequest,
-    { params }: { params: { id: string } }
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
-    try {
-        const { accessToken } = await withAuth({ ensureSignedIn: true });
+  try {
+    const { id } = await params;
+    const cookieStore = await cookies();
+    const accessToken = cookieStore.get('access_token')?.value;
 
-        if (!accessToken) {
-            console.error('No access token available');
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/hospitals/${id}`,
+      { headers: createBackendHeaders(accessToken) }
+    );
 
-        const hospitalId = params.id;
-
-        // Forward the request to the backend
-        const response = await fetch(
-            `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/hospitals/${hospitalId}`,
-            {
-                headers: {
-                    'Authorization': `Bearer ${accessToken}`,
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                },
-            }
-        );
-
-        if (!response.ok) {
-            console.error('Hospital fetch failed:', response.status, response.statusText);
-            return NextResponse.json({
-                error: 'Failed to fetch hospital details'
-            }, { status: response.status });
-        }
-
-        const data = await response.json();
-        return NextResponse.json(data);
-    } catch (error: any) {
-        console.error('Error fetching hospital:', error);
-        return NextResponse.json(
-            { error: 'Failed to fetch hospital details' },
-            { status: 500 }
-        );
+    if (!response.ok) {
+      return NextResponse.json({ error: 'Hospital not found' }, { status: 404 });
     }
+
+    const data = await response.json();
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error('Hospital fetch error:', error);
+    return NextResponse.json({ error: 'Failed to fetch hospital' }, { status: 500 });
+  }
 }

@@ -28,7 +28,7 @@ export default function DoctorDashboardPage() {
     }
 
     if (!isDoctor) {
-        redirect('/dashboard/dashboard');
+        redirect('/dashboard');
     }
 
     return (
@@ -43,7 +43,7 @@ export default function DoctorDashboardPage() {
                         </h1>
                         <p className="text-xs text-gray-500 mt-0.5">Manage your practice</p>
                     </div>
-                    <Link href="/dashboard/dashboard">
+                    <Link href="/dashboard">
                         <button className="text-sm text-medical-blue font-medium">
                             Patient View
                         </button>

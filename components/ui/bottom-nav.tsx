@@ -16,7 +16,7 @@ interface NavItem {
 const patientNavItems: NavItem[] = [
   {
     label: 'Home',
-    href: '/dashboard/dashboard',
+    href: '/dashboard',
     icon: Home,
   },
   {
@@ -68,7 +68,7 @@ export function BottomNav() {
   const navItems = mode === 'doctor' ? doctorNavItems : patientNavItems;
 
   const isActive = (href: string) => {
-    if (href === '/dashboard/dashboard' || href === '/doctor/dashboard') {
+    if (href === '/dashboard' || href === '/doctor/dashboard') {
       return pathname === href;
     }
     return pathname.startsWith(href);

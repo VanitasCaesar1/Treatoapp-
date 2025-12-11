@@ -4,8 +4,9 @@ import { withAuth } from '@workos-inc/authkit-nextjs';
 // POST /api/social/stories/[id]/view - Mark story as viewed
 export async function POST(
     req: NextRequest,
-    { params }: { params: { id: string } }
+    props: { params: Promise<{ id: string }> }
 ) {
+    const params = await props.params;
     try {
         const { user } = await withAuth();
 
@@ -27,13 +28,13 @@ export async function POST(
         );
 
         if (!response.ok) {
-            return NextResponse.json({ error: 'Failed to mark story as viewed' }, { status: response.status });
+            return NextResponse.json({ error: 'Failed to view story' }, { status: response.status });
         }
 
         const data = await response.json();
         return NextResponse.json(data);
     } catch (error: any) {
-        console.error('Error marking story as viewed:', error);
-        return NextResponse.json({ error: 'Failed to mark story as viewed' }, { status: 500 });
+        console.error('Error viewing story:', error);
+        return NextResponse.json({ error: 'Failed to view story' }, { status: 500 });
     }
 }

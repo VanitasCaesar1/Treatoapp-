@@ -11,6 +11,9 @@ project(':capacitor-community-keep-awake').projectDir = new File('../node_module
 include ':capacitor-app'
 project(':capacitor-app').projectDir = new File('../node_modules/@capacitor/app/android')
 
+include ':capacitor-browser'
+project(':capacitor-browser').projectDir = new File('../node_modules/@capacitor/browser/android')
+
 include ':capacitor-camera'
 project(':capacitor-camera').projectDir = new File('../node_modules/@capacitor/camera/android')
 
@@ -43,3 +46,6 @@ project(':capacitor-splash-screen').projectDir = new File('../node_modules/@capa
 
 include ':capacitor-status-bar'
 project(':capacitor-status-bar').projectDir = new File('../node_modules/@capacitor/status-bar/android')
+
+include ':ionic-capacitor-phonepe-pg'
+project(':ionic-capacitor-phonepe-pg').projectDir = new File('../node_modules/ionic-capacitor-phonepe-pg/android')

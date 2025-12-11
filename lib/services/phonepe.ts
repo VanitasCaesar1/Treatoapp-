@@ -1,111 +1,159 @@
-import crypto from 'crypto';
-import axios from 'axios';
+import { Capacitor } from '@capacitor/core';
 
-export interface PaymentRequest {
-    amount: number;
-    userId: string;
-    merchantTransactionId: string;
-    redirectUrl: string;
-    callbackUrl: string;
-    mobileNumber?: string;
+// PhonePe Plugin types based on ionic-capacitor-phonepe-pg
+interface PhonePeInitOptions {
+  environment: 'SANDBOX' | 'PRODUCTION';
+  merchantId: string;
+  flowId: string;
+  enableLogging: boolean;
 }
 
-export const initiatePayment = async ({
-    amount,
-    userId,
-    merchantTransactionId,
-    redirectUrl,
-    callbackUrl,
-    mobileNumber
-}: PaymentRequest) => {
+interface PhonePeTransactionOptions {
+  request: string; // Base64 encoded payload
+  showLoaderFlag?: boolean;
+  appSchema?: string | null; // iOS only - custom URL scheme
+}
+
+interface PhonePeTransactionResult {
+  status: 'SUCCESS' | 'FAILURE' | 'INTERRUPTED';
+  error?: string;
+}
+
+interface UpiApp {
+  packageName?: string; // Android
+  applicationName: string;
+  versionCode?: string; // Android
+}
+
+// Dynamic import for native plugin
+let PhonePePlugin: any = null;
+
+async function getPhonePePlugin() {
+  if (!PhonePePlugin && Capacitor.isNativePlatform()) {
     try {
-        const merchantId = process.env.PHONEPE_MERCHANT_ID;
-        const clientSecret = process.env.PHONEPE_CLIENT_SECRET; // This is the Salt Key
-        const saltIndex = process.env.PHONEPE_SALT_INDEX || '1';
-        const environment = process.env.PHONEPE_ENVIRONMENT || 'UAT'; // UAT or PRODUCTION
-
-        if (!merchantId || !clientSecret) {
-            throw new Error('PhonePe credentials not configured');
-        }
-
-        const apiEndpoints: Record<string, string> = {
-            UAT: 'https://api-preprod.phonepe.com/apis/pg-sandbox/pg/v1/pay',
-            PRODUCTION: 'https://api.phonepe.com/apis/hermes/pg/v1/pay'
-        };
-
-        const apiUrl = apiEndpoints[environment] || apiEndpoints.UAT;
-
-        const payload = {
-            merchantId,
-            merchantTransactionId,
-            merchantUserId: userId,
-            amount: Math.round(amount * 100), // Amount in paise
-            redirectUrl,
-            redirectMode: 'REDIRECT',
-            callbackUrl,
-            mobileNumber,
-            paymentInstrument: {
-                type: 'PAY_PAGE'
-            }
-        };
-
-        const base64Payload = Buffer.from(JSON.stringify(payload)).toString('base64');
-        const stringToSign = base64Payload + '/pg/v1/pay' + clientSecret;
-        const checksum = crypto.createHash('sha256').update(stringToSign).digest('hex');
-        const xVerify = `${checksum}###${saltIndex}`;
-
-        const response = await axios.post(apiUrl, {
-            request: base64Payload
-        }, {
-            headers: {
-                'Content-Type': 'application/json',
-                'X-VERIFY': xVerify,
-            }
-        });
-
-        return response.data;
-
-    } catch (error: any) {
-        console.error('PhonePe Initiation Error:', error.response?.data || error.message);
-        throw error;
+      const module = await import('ionic-capacitor-phonepe-pg');
+      PhonePePlugin = module.PhonePePaymentPlugin;
+    } catch (e) {
+      console.error('Failed to load PhonePe plugin:', e);
     }
+  }
+  return PhonePePlugin;
+}
+
+export const PhonePeService = {
+  /**
+   * Check if running on native platform (iOS/Android)
+   */
+  isNative(): boolean {
+    return Capacitor.isNativePlatform();
+  },
+
+  /**
+   * Get current platform
+   */
+  getPlatform(): 'ios' | 'android' | 'web' {
+    return Capacitor.getPlatform() as 'ios' | 'android' | 'web';
+  },
+
+  /**
+   * Initialize PhonePe SDK (call once on app start)
+   * @param options.environment - SANDBOX or PRODUCTION
+   * @param options.merchantId - Merchant ID from PhonePe
+   * @param options.flowId - Alphanumeric string for tracking (e.g., user ID)
+   * @param options.enableLogging - Enable SDK logs (iOS)
+   */
+  async init(options: PhonePeInitOptions): Promise<boolean> {
+    if (!this.isNative()) {
+      console.log('PhonePe SDK: Web platform, using redirect flow');
+      return false;
+    }
+
+    const plugin = await getPhonePePlugin();
+    if (!plugin) {
+      console.error('PhonePe plugin not available');
+      return false;
+    }
+
+    try {
+      const result = await plugin.init({
+        environment: options.environment,
+        merchantId: options.merchantId,
+        flowId: options.flowId,
+        enableLogging: options.enableLogging
+      });
+      console.log('PhonePe SDK initialized:', result);
+      return result?.success === true || Object.values(result)[0] === true;
+    } catch (error) {
+      console.error('PhonePe SDK init failed:', error);
+      return false;
+    }
+  },
+
+  /**
+   * Start a payment transaction using native SDK
+   * @param options.request - Base64 encoded request body
+   * @param options.showLoaderFlag - Show loader in PhonePe app (default: true)
+   * @param options.appSchema - iOS custom URL scheme for callback
+   */
+  async startTransaction(options: PhonePeTransactionOptions): Promise<PhonePeTransactionResult> {
+    if (!this.isNative()) {
+      return { status: 'FAILURE', error: 'Native platform required' };
+    }
+
+    const plugin = await getPhonePePlugin();
+    if (!plugin) {
+      return { status: 'FAILURE', error: 'PhonePe plugin not available' };
+    }
+
+    try {
+      const result = await plugin.startTransaction({
+        request: options.request,
+        showLoaderFlag: options.showLoaderFlag ?? true,
+        appSchema: options.appSchema || null
+      });
+      
+      return {
+        status: result.status as PhonePeTransactionResult['status'],
+        error: result.error
+      };
+    } catch (error: any) {
+      console.error('PhonePe transaction error:', error);
+      return { status: 'FAILURE', error: error.message || 'Transaction failed' };
+    }
+  },
+
+  /**
+   * Get list of installed UPI apps
+   */
+  async getUpiApps(): Promise<UpiApp[]> {
+    if (!this.isNative()) return [];
+
+    const plugin = await getPhonePePlugin();
+    if (!plugin) return [];
+
+    try {
+      const platform = this.getPlatform();
+      let result: Record<string, string>;
+
+      if (platform === 'android') {
+        result = await plugin.getUpiAppsForAndroid();
+      } else if (platform === 'ios') {
+        result = await plugin.getUpiAppsForIos();
+      } else {
+        return [];
+      }
+
+      // Parse JSON string response
+      const jsonStr = Object.values(result)[0];
+      if (typeof jsonStr === 'string') {
+        return JSON.parse(jsonStr) as UpiApp[];
+      }
+      return [];
+    } catch (error) {
+      console.error('Failed to get UPI apps:', error);
+      return [];
+    }
+  }
 };
 
-export const checkPaymentStatus = async (merchantTransactionId: string) => {
-    try {
-        const merchantId = process.env.PHONEPE_MERCHANT_ID;
-        const clientSecret = process.env.PHONEPE_CLIENT_SECRET;
-        const saltIndex = process.env.PHONEPE_SALT_INDEX || '1';
-        const environment = process.env.PHONEPE_ENVIRONMENT || 'UAT';
-
-        if (!merchantId || !clientSecret) {
-            throw new Error('PhonePe credentials not configured');
-        }
-
-        const apiEndpoints: Record<string, string> = {
-            UAT: 'https://api-preprod.phonepe.com/apis/pg-sandbox',
-            PRODUCTION: 'https://api.phonepe.com/apis/hermes'
-        };
-
-        const baseUrl = apiEndpoints[environment] || apiEndpoints.UAT;
-        const endpoint = `/pg/v1/status/${merchantId}/${merchantTransactionId}`;
-
-        const stringToSign = endpoint + clientSecret;
-        const checksum = crypto.createHash('sha256').update(stringToSign).digest('hex');
-        const xVerify = `${checksum}###${saltIndex}`;
-
-        const response = await axios.get(`${baseUrl}${endpoint}`, {
-            headers: {
-                'Content-Type': 'application/json',
-                'X-VERIFY': xVerify,
-                'X-MERCHANT-ID': merchantId,
-            }
-        });
-
-        return response.data;
-
-    } catch (error: any) {
-        console.error('PhonePe Status Error:', error.response?.data || error.message);
-        throw error;
-    }
-};
+export type { PhonePeInitOptions, PhonePeTransactionOptions, PhonePeTransactionResult, UpiApp };

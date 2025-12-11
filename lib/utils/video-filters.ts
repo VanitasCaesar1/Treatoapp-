@@ -75,7 +75,8 @@ export async function processVideo(
     options: VideoEditOptions
 ): Promise<{ file: File; thumbnail: string }> {
     // For client-side preview, we'll apply CSS filters
-    // For actual processing, this would need FFmpeg.wasm or server-side processing  const thumbnail = await captureVideoThumbnail(file);
+    // For actual processing, this would need FFmpeg.wasm or server-side processing
+    const thumbnail = await captureVideoThumbnail(file);
 
     // Return original file with metadata for server-side processing
     return {

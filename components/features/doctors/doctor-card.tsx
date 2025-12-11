@@ -1,11 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { Star, MapPin, Calendar, Clock, ShieldCheck } from 'lucide-react';
+import { Star, Clock, ShieldCheck, Navigation } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Doctor } from '@/lib/types/doctor';
-import { cn } from '@/lib/utils';
 import { useHaptics } from '@/lib/hooks/use-haptics';
 
 interface DoctorCardProps {
@@ -23,9 +22,13 @@ export function DoctorCard({ doctor }: DoctorCardProps) {
   const profileImage = doctor.profileImage || doctor.profile_image;
   const rating = doctor.rating || 0;
   const price = doctor.price;
+  const distance = (doctor as any).distance;
 
-  // Mock availability for demo (in real app, this would come from backend)
-  const isAvailableToday = Math.random() > 0.3;
+  // Use actual availability data from backend if available
+  // available_slots_today comes from the search API
+  const availableSlotsToday = (doctor as any).available_slots_today ?? (doctor as any).availableSlotsToday;
+  const nextAvailableDate = (doctor as any).next_available_date ?? (doctor as any).nextAvailableDate;
+  const isAvailableToday = availableSlotsToday !== undefined ? availableSlotsToday > 0 : (doctor as any).is_available_today;
 
   const handleBookPress = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -46,11 +49,17 @@ export function DoctorCard({ doctor }: DoctorCardProps) {
           {isAvailableToday ? (
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-green-50 text-green-700 text-[10px] font-bold uppercase tracking-wide border border-green-100">
               <Clock className="h-3 w-3" />
-              Available Today
+              {availableSlotsToday ? `${availableSlotsToday} slots today` : 'Available Today'}
+            </span>
+          ) : nextAvailableDate ? (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 text-[10px] font-bold uppercase tracking-wide border border-amber-100">
+              <Clock className="h-3 w-3" />
+              Next: {new Date(nextAvailableDate).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric' })}
             </span>
           ) : (
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gray-50 text-gray-500 text-[10px] font-bold uppercase tracking-wide border border-gray-100">
-              Next Available: Tomorrow
+              <Clock className="h-3 w-3" />
+              Check Availability
             </span>
           )}
 
@@ -84,7 +93,7 @@ export function DoctorCard({ doctor }: DoctorCardProps) {
             </h3>
             <p className="text-medical-blue font-medium text-sm mb-2">{specialty}</p>
 
-            <div className="flex items-center gap-3 text-xs text-gray-500 font-medium">
+            <div className="flex items-center gap-3 text-xs text-gray-500 font-medium flex-wrap">
               <div className="flex items-center gap-1 bg-gray-50 px-2 py-1 rounded-lg">
                 <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
                 <span className="text-gray-900">{rating > 0 ? rating.toFixed(1) : 'New'}</span>
@@ -94,7 +103,20 @@ export function DoctorCard({ doctor }: DoctorCardProps) {
 
               <span>{experience} yrs exp</span>
 
-              {doctor.location && (
+              {distance !== undefined && (
+                <>
+                  <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
+                  <span className="flex items-center gap-1 text-green-700 bg-green-50 px-2 py-0.5 rounded-full">
+                    <Navigation className="h-3 w-3" />
+                    {distance < 1 
+                      ? `${Math.round(distance * 1000)}m`
+                      : `${distance} km`
+                    }
+                  </span>
+                </>
+              )}
+
+              {!distance && doctor.location && (
                 <>
                   <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
                   <span className="truncate max-w-[80px]">{doctor.location}</span>

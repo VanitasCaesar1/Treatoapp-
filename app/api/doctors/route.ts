@@ -1,13 +1,11 @@
-
 import { NextRequest, NextResponse } from "next/server";
-import { withAuth } from '@workos-inc/authkit-nextjs';
+import { withAuth, createBackendHeaders } from "@/lib/auth/api-auth";
 
 export async function GET(req: NextRequest) {
   try {
-    const { accessToken } = await withAuth({ ensureSignedIn: true });
+    const { accessToken } = await withAuth(req);
 
     if (!accessToken) {
-      console.error('No access token available');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -29,14 +27,10 @@ export async function GET(req: NextRequest) {
     queryParams.append("limit", limit);
     queryParams.append("offset", offset);
 
-    // Forward the request to the backend with minimal headers
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/doctors?${queryParams.toString()}`, {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-    });
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/doctors?${queryParams.toString()}`,
+      { headers: createBackendHeaders(accessToken) }
+    );
 
     if (!response.ok) {
       return NextResponse.json({ error: 'Failed to fetch doctors' }, { status: response.status });
@@ -47,27 +41,16 @@ export async function GET(req: NextRequest) {
     // Normalize doctor data to match frontend expectations
     if (doctorsData.doctors && Array.isArray(doctorsData.doctors)) {
       doctorsData.doctors = doctorsData.doctors.map((doctor: any, index: number) => {
-        // Parse specialization if it's a JSON string
         let specialization = doctor.specialization;
         if (typeof specialization === 'string') {
-          try {
-            specialization = JSON.parse(specialization);
-          } catch (e) {
-            // Keep as string if parsing fails
-          }
+          try { specialization = JSON.parse(specialization); } catch (e) {}
         }
 
-        // Parse languages if it's a JSON string
         let languages = doctor.languages_spoken;
         if (typeof languages === 'string') {
-          try {
-            languages = JSON.parse(languages);
-          } catch (e) {
-            languages = [];
-          }
+          try { languages = JSON.parse(languages); } catch (e) { languages = []; }
         }
 
-        // Split name into firstName and lastName if needed
         const nameParts = (doctor.name || '').split(' ');
         const firstName = doctor.firstName || nameParts[0] || '';
         const lastName = doctor.lastName || nameParts.slice(1).join(' ') || '';

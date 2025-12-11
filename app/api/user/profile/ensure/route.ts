@@ -1,62 +1,52 @@
-
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@workos-inc/authkit-nextjs';
+import { withAuth, createBackendHeaders } from '@/lib/auth/api-auth';
 
-export async function POST(request: NextRequest) {
+/**
+ * POST /api/user/profile/ensure
+ * 
+ * Ensures a user profile exists in the backend after OAuth login.
+ * Called automatically after successful authentication.
+ * Creates the profile if it doesn't exist, returns existing if it does.
+ */
+export async function POST(req: NextRequest) {
   try {
-    const { user, accessToken } = await withAuth({ ensureSignedIn: true });
+    const { accessToken, user } = await withAuth(req);
 
     if (!accessToken || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Try to get existing profile first
-    const checkResponse = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/user/profile`, {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    // If profile exists, return it
-    if (checkResponse.ok) {
-      const profile = await checkResponse.json();
-      return NextResponse.json({ exists: true, profile });
-    }
-
-    // Profile doesn't exist, create it
-    const createResponse = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/user/profile`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        email: user.email,
-        name: user.firstName && user.lastName 
-          ? `${user.firstName} ${user.lastName}` 
-          : user.email?.split('@')[0] || 'User',
-        username: user.email?.split('@')[0] || `user_${Date.now()}`,
-        email_verified: user.emailVerified || false,
-      }),
-    });
-
-    if (!createResponse.ok) {
-      const errorText = await createResponse.text();
-      console.error('Failed to create profile:', errorText);
-      return NextResponse.json(
-        { error: 'Failed to create profile', details: errorText },
-        { status: createResponse.status }
-      );
-    }
-
-    const newProfile = await createResponse.json();
-    return NextResponse.json({ exists: false, profile: newProfile, created: true });
-  } catch (error: any) {
-    console.error('Error ensuring profile exists:', error);
-    return NextResponse.json(
-      { error: 'Failed to ensure profile exists', details: error.message },
-      { status: 500 }
+    // Call backend to ensure profile exists
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/users/profile/ensure`,
+      {
+        method: 'POST',
+        headers: createBackendHeaders(accessToken, user.id),
+        body: JSON.stringify({
+          user_id: user.id,
+          email: user.email,
+          first_name: user.firstName,
+          last_name: user.lastName,
+        }),
+      }
     );
+
+    if (!response.ok) {
+      // Profile creation failed, but don't block the user
+      console.error('Failed to ensure profile:', response.status);
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Profile will be created on first access' 
+      });
+    }
+
+    const data = await response.json();
+    return NextResponse.json({ success: true, profile: data });
+  } catch (error) {
+    console.error('Error ensuring profile:', error);
+    return NextResponse.json({ 
+      success: false, 
+      message: 'Profile creation deferred' 
+    });
   }
 }

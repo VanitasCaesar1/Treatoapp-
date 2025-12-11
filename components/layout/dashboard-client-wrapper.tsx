@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect } from 'react';
 import { useBackButton } from '@/lib/hooks/use-back-button';
 import { useAppState } from '@/lib/hooks/use-app-state';
 import { usePathname } from 'next/navigation';
+import { LocationPromptDrawer } from '@/components/location/location-prompt-drawer';
 
 export function DashboardClientWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -30,5 +30,11 @@ export function DashboardClientWrapper({ children }: { children: React.ReactNode
     }
   );
 
-  return <>{children}</>;
+  return (
+    <>
+      {children}
+      {/* Global Location Prompt - shows when no location is set */}
+      <LocationPromptDrawer />
+    </>
+  );
 }
